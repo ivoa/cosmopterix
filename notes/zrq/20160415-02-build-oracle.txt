@@ -1,0 +1,273 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -------------------------------------------------------------------------------------------
+# Strict error checking.
+# http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -uo pipefail
+IFS=$'\n\t'
+
+# -------------------------------------------------------------------------------------------
+# Prepare our Oracle build.
+#[user@desktop]
+
+    pushd /var/local/projects/edinburgh/database/oracle
+        pushd docker
+            if [ ! -d 'madhead-oracle-xe' ]
+            then
+                git clone 'https://github.com/madhead/docker-oracle-xe.git' 'madhead-oracle-xe'
+            fi
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Prepare our Oracle rpm file.
+#[user@desktop]
+
+    #
+    # Download the zipfile from Oracle.
+    # http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html
+
+    version=11.2.0-1.0
+    rpmfile=oracle-xe-${version}.x86_64.rpm
+    zipfile=${rpmfile}.zip
+    tarfile=${rpmfile}.tar.gz
+
+    pushd /var/local/projects/edinburgh/database/oracle
+
+        pushd binaries
+            if [ ! -e "${rpmfile}" ]
+            then
+                unzip -j "${zipfile}" '*.rpm'
+            fi
+            if [ ! -e "${tarfile}" ]
+            then
+                tar -cvzf "${tarfile}" \
+                    "${rpmfile}"
+            fi
+        popd
+
+        pushd docker
+            pushd madhead-oracle-xe
+                if [ ! -d 'rpm' ]
+                then
+                    mkdir 'rpm'
+                fi
+                if [ ! -e "rpm/${tarfile}" ]
+                then
+                    ln "../../binaries/${tarfile}" "rpm/${tarfile}"
+                fi
+            popd
+        popd
+    popd
+
+# -----------------------------------------------------
+# Build our container.
+#[user@desktop]
+
+    pushd /var/local/projects/edinburgh/database/oracle
+
+        docker build \
+            -t "madhead-docker-oracle-xe:11.2" \
+            docker/madhead-oracle-xe
+    
+    popd
+
+    #
+    # During the configuration of Oracle XE instance two files - init.ora and initXETemp.ora -
+    # are overridden with ones from config directory of this repo.
+    # The only difference is that memory_target parameter is commented in them to prevent
+    # ORA-00845: MEMORY_TARGET not supported on this system error.
+    # The only piece of magic in this image :).
+    #
+
+# -------------------------------------------------------------------------------------------
+# Run our Oracle container.
+#[user@desktop]
+
+    docker run \
+        --detach \
+        --name oracle \
+        --expose 8080 \
+        --expose 1521 \
+        "madhead-docker-oracle-xe:11.2"
+
+    docker logs -f oracle
+
+        Mon Apr 11 13:31:05 UTC 2016
+        Starting Oracle Net Listener.
+        Starting Oracle Database 11g Express Edition instance.
+
+    docker exec -it \
+        oracle \
+        bash
+
+            sqlplus
+
+
+                # Enter user-name: system
+                # Enter password: oracle
+
+                # Connected to:
+                # Oracle Database 11g Express Edition Release 11.2.0.2.0 - 64bit Production
+                # SQL> 
+
+# ERROR at line 3:
+# ORA-02000: missing ( keyword
+# "IDENTITY not added until 12.1.0.1"
+# http://stackoverflow.com/questions/26989878/how-to-auto-increment-the-id-in-oracle
+
+                CREATE TABLE alpha_source
+                    (
+                    id   INTEGER NOT NULL,
+                    ra   DOUBLE PRECISION NOT NULL,
+                    decl DOUBLE PRECISION NOT NULL,
+                    PRIMARY KEY (id)
+                    );
+
+                CREATE SEQUENCE alpha_source_id_seq
+                    START WITH  1
+                    INCREMENT BY 1
+                    MINVALUE 1
+                    ;
+
+                CREATE TRIGGER alpha_source_id_trig
+                    BEFORE INSERT ON alpha_source
+                    FOR EACH ROW
+                    BEGIN
+                        :NEW.id := alpha_source_id_seq.NEXTVAL;
+                    END;
+                    /
+
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0,  0.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0,  1.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0,  2.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0,  3.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0,  4.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0,  5.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0,  6.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0,  7.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0,  8.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0,  9.0) ;
+
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 10.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 11.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 12.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 13.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 14.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 15.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 16.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 17.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 18.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 19.0) ;
+
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 20.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 21.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 22.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 23.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 24.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 25.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 26.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 27.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 28.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 29.0) ;
+
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 30.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 31.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 32.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 33.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 34.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 35.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 36.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 37.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 38.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 39.0) ;
+
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 40.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 41.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 42.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 43.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 44.0) ;
+                INSERT INTO alpha_source (ra, decl) VALUES (0.0, 45.0) ;
+
+                #
+                # Pagination using ROWNUM.
+                # http://www.oracle.com/technetwork/issue-archive/2006/06-sep/o56asktom-086197.html
+
+                SELECT id, ra, decl FROM alpha_source ;
+
+                SELECT
+                    id, ra, decl
+                FROM
+                    (
+                    SELECT id, ra, decl FROM alpha_source
+                    )
+                WHERE ROWNUM <= 10
+                ;
+
+
+                SELECT
+                    id, ra, decl
+                FROM
+                    (
+                    SELECT
+                        id, ra, decl, ROWNUM as rn
+                    FROM
+                        (
+                        SELECT id, ra, decl FROM alpha_source
+                        )
+                    WHERE
+                        ROWNUM <= 20
+                    )
+                WHERE rn > 10
+                ;
+
+                SELECT
+                    id, ra, decl
+                FROM
+                    (
+                    SELECT
+                        id, ra, decl, ROWNUM as rn
+                    FROM
+                        alpha_source
+                    WHERE
+                        ROWNUM <= 20
+                    )
+                WHERE rn > 10
+                ;
+
+                SELECT
+                    id, ra, decl
+                FROM
+                    (
+                    SELECT
+                        id, ra, decl, ROWNUM as rn
+                    FROM
+                        alpha_source
+                    )
+                WHERE rn > 10 AND rn <= 20
+                ;
+
+            quit
+        exit        
+
+

@@ -1,0 +1,271 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -------------------------------------------------------------------------------------------
+# Strict error checking.
+# http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -uo pipefail
+IFS=$'\n\t'
+
+# -----------------------------------------------------
+# Create our secret function.
+#[user@desktop]
+
+    secrethost='dave@shepseskaf.roe.ac.uk'
+    secretfile='${HOME:?}/secret.store'
+
+    secret()
+        {
+        local key=${1:?}
+        ssh -o 'VisualHostKey=no' "${secrethost:?}" "sed -n 's/^${key}=\\(.*\\)/\\1/p' \"${secretfile:?}\"" 
+        }
+
+    secret 'ping'
+
+# -----------------------------------------------------
+# Create our sqsh config.
+#[user@desktop]
+
+    sqshconf=$(mktemp)
+    cat > "${sqshconf}" << EOF
+
+    sqlname=nastja
+    sqllink=nerijus
+
+    sqlhost=$(secret 'sqlserver.admin.host')
+    sqlpath=$(secret 'sqlserver.admin.path')
+
+    sqldata=$(secret 'sqlserver.admin.data')
+    sqluser=$(secret 'sqlserver.admin.user')
+    sqlpass=$(secret 'sqlserver.admin.pass')
+
+    tunneluser=$(secret 'ssh.tunnel.user')
+    tunnelhost=$(secret 'ssh.tunnel.host')
+
+EOF
+
+# -----------------------------------------------------
+# Start our SQLServer tunnel.
+#[user@desktop]
+
+    source "${sqshconf}"
+
+    docker run \
+        --detach \
+        --interactive \
+        --name "${sqlname:?}" \
+        --env  "tunneluser=${tunneluser:?}" \
+        --env  "tunnelhost=${tunnelhost:?}" \
+        --env  "targethost=${sqlhost:?}" \
+        --volume "${SSH_AUTH_SOCK}:/tmp/ssh_auth_sock" \
+        firethorn/sql-tunnel:1.1
+
+# -----------------------------------------------------
+# Create our database config.
+#[user@desktop]
+
+    dataconf=$(mktemp)
+    cat > "${dataconf}" << EOF
+databasename=adql$(date '+%Y%m%d%H%M%S')test
+databaseuser=adqltester
+databasepass=$(pwgen 10 1)
+EOF
+
+# -----------------------------------------------------
+# Run our sqlsh container.
+#[user@desktop]
+
+    source "${sqshconf}"
+    source "${HOME:?}/firethorn.settings"
+    
+    docker run \
+        --rm -it \
+        --link "${sqlname:?}:${sqllink:?}" \
+        --volume "${sqshconf}":/sqsh.conf \
+        --volume "${dataconf}":/data.conf \
+        --volume "${FIRETHORN_CODE}/docker/adql/mssql/sql/alpha-source.sql:/alpha-source.sql" \
+        firethorn/sqsh:1.1 \
+        bash
+
+        #
+        # Load our configuration properties
+        source "/sqsh.conf"
+        source "/data.conf"
+
+        #
+        # Create our database and user account.
+        sqsh \
+            -S "${sqllink:?}" \
+            -U "${sqluser:?}" \
+            -P "${sqlpass:?}" \
+            << EOF
+
+            USE [master]
+            CREATE DATABASE [${databasename}] ON  PRIMARY 
+                (
+                NAME = N'${databasename}',
+                FILENAME = N'${sqlpath}\\${databasename}.mdf',
+                SIZE = 3072KB ,
+                FILEGROWTH = 1024KB
+                )
+            LOG ON 
+                (
+                NAME = N'${databasename}_log',
+                FILENAME = N'${sqlpath}\\${databasename}_log.ldf',
+                SIZE = 4096KB,
+                FILEGROWTH = 10%
+                )
+            go
+
+            USE [master]
+            CREATE LOGIN [${databaseuser}] WITH PASSWORD = '${databasepass}'
+            go
+
+            USE [${databasename}]
+            CREATE USER [${databaseuser}] FOR LOGIN [${databaseuser}]
+            go
+
+            USE [${databasename}]
+            GRANT CREATE TABLE ON DATABASE::[${databasename}] TO [${databaseuser}]
+            GRANT REFERENCES ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT EXECUTE    ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT ALTER      ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT INSERT     ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT SELECT     ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT UPDATE     ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT DELETE     ON SCHEMA::[dbo] TO [${databaseuser}]
+            go
+
+EOF
+
+        #
+        # Run our tests.
+        sqsh \
+            -S "${sqllink:?}" \
+            -U "${sqluser:?}" \
+            -P "${sqlpass:?}" \
+            -D "${databasename:?}"
+
+            \loop /alpha-source.sql
+            go
+
+            SELECT @@version ;
+
+	        -- Microsoft SQL Server 2012 (SP1) - 11.0.3000.0 (X64) 
+	        -- Oct 19 2012 13:38:57 
+	        -- Copyright (c) Microsoft Corporation
+	        -- Enterprise Edition (64-bit) on Windows NT 6.0 <X64> (Build 6002: Service Pack 2)
+
+            SELECT id, ra, decl FROM alpha_source ;
+            SELECT TOP 10 id, ra, decl FROM alpha_source ;
+
+            -- MSSQL :
+            --  [ORDER BY <sort_column> OFFSET <row_offset> ROWS FETCH NEXT <row_count> ROWS ONLY
+            --
+            --  [OFFSET <row_offset>] is requires [ORDER BY]
+            --  [ORDER BY 1] is allowed
+            --
+            --  [FETCH NEXT 10 ROWS ONLY] requires [OFFSET]
+            --  [OFFSET 0] is allowed
+
+            --
+            -- OFFSET/FETCH (version >= 2012)
+            -- http://stackoverflow.com/a/25874124
+            SELECT id, ra, decl FROM alpha_source ORDER BY 1 OFFSET 10 ROWS ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY 1 OFFSET 10 ROWS ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY 1 OFFSET  0 ROWS FETCH NEXT 10 ROWS ONLY ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY 1 OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY ;
+
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ROWS ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ROWS ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET  0 ROWS FETCH NEXT 10 ROWS ONLY ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY ;
+
+            -- SELECT TOP 10 id, ra, decl FROM alpha_source ORDER BY id OFFSET 10 ROWS ;
+            -- SELECT id, ra, decl FROM alpha_source ORDER BY id FETCH NEXT 10 ROWS ONLY ;
+
+            --
+            -- ROW_NUMBER() (version > 2005)
+            -- http://stackoverflow.com/a/603779
+            SELECT
+                id, ra, decl
+            FROM
+                (
+                SELECT
+                    query.*,
+                    ROW_NUMBER() OVER (ORDER BY query.id) AS _row
+                FROM
+                    (
+                    SELECT
+                        id, ra, decl
+                    FROM
+                        alpha_source
+                    ) AS query
+                ) AS wrapper
+            WHERE
+                _row BETWEEN 10 AND 20
+            ;
+
+            --
+            -- ROW_NUMBER() (version > 2005)
+            SELECT
+                id, ra, decl
+            FROM
+                (
+                SELECT
+                    id, ra, decl,
+                    ROW_NUMBER() OVER (ORDER BY id) AS _row
+                FROM
+                    alpha_source
+                ) AS wrapped
+            WHERE
+                _row BETWEEN 10 AND 20
+            ;
+
+            exit
+            
+        #
+        # Tidy up after.
+        sqsh \
+            -S "${sqllink:?}" \
+            -U "${sqluser:?}" \
+            -P "${sqlpass:?}" \
+            << EOF
+
+            USE [${databasename}]
+            DROP USER [${databaseuser}]
+            go
+
+            USE master
+            DROP LOGIN [${databaseuser}]
+            go
+
+            USE master
+            DROP DATABASE [${databasename}]
+            go
+
+EOF
+
+        exit
+
+
+

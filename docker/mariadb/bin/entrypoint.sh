@@ -84,8 +84,6 @@ serverdata=${serverdata}
 serverport=${serverport}
 serveripv4=${serveripv4}
 serversock=${serversock}
-#serverlocale=${serverlocale}
-#serverencoding=${serverencoding}
 
 #
 # Database settings
@@ -296,8 +294,7 @@ then
 
     echo ""
     echo "Running MariaDB client"
-    mysql \
-        $@
+    mysql
 
 #
 # User command.
@@ -305,7 +302,6 @@ else
 
     echo ""
     echo "Running user command"
-    
     exec "$@"
 
 fi

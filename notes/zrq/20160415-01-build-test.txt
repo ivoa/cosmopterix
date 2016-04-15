@@ -20,3 +20,308 @@
 #
 #
 
+# -----------------------------------------------------
+# Create our local settings.
+#[user@desktop]
+
+    cat > "${HOME:?}/cosmopterix.settings" << EOF
+COSMOPTERIX_HOME=/var/local/projects/edinburgh/cosmopterix
+EOF
+
+# -----------------------------------------------------
+# Build our containers.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_HOME:?}"
+
+        pushd docker
+
+            docker build \
+                --tag "cosmopterix/fedora:23-1.0" \
+                fedora/23
+
+            docker build \
+                --tag "cosmopterix/java:8-1.0" \
+                java/8
+
+            docker build \
+                --tag "cosmopterix/mysql:5.6-1.0" \
+                mysql
+
+            docker build \
+                --tag "cosmopterix/mariadb:10.0-1.0" \
+                mariadb
+
+            docker build \
+                --tag "cosmopterix/pgsql:9.4-1.0" \
+                pgsql
+
+            docker build \
+                --tag "cosmopterix/derby:10.12-1.0" \
+                derby
+
+            docker build \
+                --tag "cosmopterix/hsqldb:2.3-1.0" \
+                hsqldb
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Test our MySQL container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_HOME:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "mysql/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run --detach \
+                --name mysql \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/mysql:5.6-1.0"
+
+            docker logs -f mysql
+
+            docker exec -it \
+                mysql \
+                entrypoint.sh \
+                mysql
+
+                -- MySQL :
+                --  [ORDER BY <sort_column>] is separate
+                --  [LIMIT <row_count>] is separate
+                --  [OFFSET <row_offset>] requires [LIMIT <row_count>]
+
+                SELECT id, ra, decl FROM alpha_source ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10,10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 4294967295 OFFSET 10 ;
+
+                --
+
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 4294967295 OFFSET 10 ;
+
+                -- SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT 10,10 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT  0 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT -1 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT  0 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT -1 OFFSET 10 ;
+
+            \q
+        popd
+    popd
+        
+# -------------------------------------------------------------------------------------------
+# Test our MariaDB container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_HOME:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "mariadb/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql"   "${datadir}/002.sql"
+
+            docker run --detach \
+                --name mariadb \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/mariadb:10.0-1.0"
+
+            docker logs -f mariadb
+
+            docker exec -it \
+                mariadb \
+                entrypoint.sh \
+                mysql
+
+                -- MariaDB :
+                --  [ORDER BY <sort_column>] is separate
+                --  [LIMIT <row_count>] is separate
+                --  [OFFSET <row_offset>] requires [LIMIT <row_count>]
+
+                SELECT id, ra, decl FROM alpha_source ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10,10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 4294967295 OFFSET 10 ;
+
+                --
+
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 4294967295 OFFSET 10 ;
+
+                -- SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT 10,10 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT  0 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT -1 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT  0 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT -1 OFFSET 10 ;
+
+            \q
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Test our PostgreSQL container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_HOME:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "pgsql/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run --detach \
+                --name pgsql \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/pgsql:9.4-1.0"
+
+            docker logs -f pgsql
+
+            docker exec -it \
+                pgsql \
+                entrypoint.sh \
+                psql
+
+                SELECT id, ra, decl FROM alpha_source ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+
+                --
+
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+
+                -- PostgreSQL :
+                --  [ORDER BY sort_column] is separate
+                --  [LIMIT row_count] is separate
+                --  [OFFSET row_offset] is separate
+
+            \q
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Test our Derby container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_HOME:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "derby/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run --detach \
+                --name derby \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/derby:10.12-1.0"
+
+            docker logs -f derby
+    
+            docker exec -it \
+                derby \
+                entrypoint.sh \
+                ij
+
+                -- Derby :
+                --  [ORDER BY sort_column] is separate
+                --  [OFFSET row_offset ROWS] is separate
+                --  [FETCH FIRST row_count ROWS ONLY] is separate
+                --  [FETCH] cannot come before [OFFSET]
+
+                SELECT id, ra, decl FROM alpha_source ;
+                SELECT id, ra, decl FROM alpha_source FETCH FIRST 10 ROWS ONLY ;
+                SELECT id, ra, decl FROM alpha_source OFFSET 10 ROWS ;
+                SELECT id, ra, decl FROM alpha_source OFFSET 10 ROWS FETCH FIRST 10 ROWS ONLY ;
+
+                --
+                
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC FETCH FIRST 10 ROWS ONLY ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ROWS ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ROWS FETCH FIRST 10 ROWS ONLY ;
+
+            quit;
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Test our HyperSQL container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_HOME:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "hsqldb/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run --detach \
+                --name hsqldb \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/hsqldb:2.3-1.0"
+
+            docker logs -f hsqldb
+    
+            docker exec -it \
+                hsqldb \
+                entrypoint.sh \
+                sqltool
+
+                -- HSQLDB :
+                --  [ORDER BY <sort_column>] is separate
+                --  [LIMIT <row_count>] is separate
+                --  [OFFSET <row_offset>] is separate
+                --  [LIMIT] and [OFFSET] can be in any order
+
+                SELECT id, ra, decl FROM alpha_source ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source OFFSET 10 LIMIT 10 ;
+
+                --
+                
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 LIMIT 10 ;
+
+            \q
+        popd
+    popd
+
+

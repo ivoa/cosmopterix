@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015, ROE (http://www.roe.ac.uk/)
+# Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,8 +23,8 @@ MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 VOLUME /var/cache/
 
 #
-# Enable delta rpms.
-#RUN dnf install -y  deltarpm
+# Clean the yum cache
+RUN dnf clean all
 
 #
 # Install common admin tools.

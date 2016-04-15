@@ -15,12 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM cosmopterix/fedora:21.1
+FROM cosmopterix/fedora:23-1.0
 MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 
 ENV JAVA_VERSION 1.8.0
 
 #
 # Install Java
-RUN yum -y install java-${JAVA_VERSION}-openjdk-headless
+RUN dnf -y install java-${JAVA_VERSION}-openjdk-headless
 

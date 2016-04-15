@@ -23,6 +23,10 @@ MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 VOLUME /var/cache/
 
 #
+# Clear the yum cache
+RUN yum clean all
+
+#
 # Install common admin tools.
 RUN yum install -y sed
 RUN yum install -y tar
