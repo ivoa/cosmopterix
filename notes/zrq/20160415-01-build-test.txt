@@ -29,7 +29,7 @@ COSMOPTERIX_HOME=/var/local/projects/edinburgh/cosmopterix
 EOF
 
 # -----------------------------------------------------
-# Build our containers.
+# Build our container images.
 #[user@desktop]
 
     source "${HOME:?}/cosmopterix.settings"
@@ -67,6 +67,31 @@ EOF
 
         popd
     popd
+
+# -----------------------------------------------------
+# Push our container images.
+#[user@desktop]
+
+    docker login
+
+        Username: xxxx
+        Password: yyyy
+        Email:    zzzz
+        Login Succeeded
+
+    docker push "cosmopterix/fedora:23-1.0"
+
+    docker push "cosmopterix/java:8-1.0"
+
+    docker push "cosmopterix/mysql:5.6-1.0"
+
+    docker push "cosmopterix/mariadb:10.0-1.0"
+
+    docker push "cosmopterix/pgsql:9.4-1.0"
+
+    docker push "cosmopterix/derby:10.12-1.0"
+
+    docker push "cosmopterix/hsqldb:2.3-1.0"
 
 # -------------------------------------------------------------------------------------------
 # Test our MySQL container.
