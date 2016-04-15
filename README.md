@@ -1,6 +1,4 @@
 # cosmopterix
-ADQL test tools
-
 Named after the <a href='http://ukmoths.org.uk/systematic-list/#Cosmopteriginae'>Cosmopteriginae</a> family of moths.
 
 A set of Docker containers for each of the main database platforms that are used within the IVOA.
