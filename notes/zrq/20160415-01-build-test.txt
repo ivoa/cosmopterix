@@ -26,6 +26,7 @@
 
     cat > "${HOME:?}/cosmopterix.settings" << EOF
 COSMOPTERIX_HOME=/var/local/projects/edinburgh/cosmopterix
+COSMOPTERIX_CODE=${COSMOPTERIX_HOME:?}/github
 EOF
 
 # -----------------------------------------------------
@@ -33,7 +34,7 @@ EOF
 #[user@desktop]
 
     source "${HOME:?}/cosmopterix.settings"
-    pushd "${COSMOPTERIX_HOME:?}"
+    pushd "${COSMOPTERIX_CODE:?}"
 
         pushd docker
 
@@ -79,6 +80,8 @@ EOF
         Email:    zzzz
         Login Succeeded
 
+    docker push "cosmopterix/pgsql:9.4-1.0"
+
     docker push "cosmopterix/fedora:23-1.0"
 
     docker push "cosmopterix/java:8-1.0"
@@ -87,11 +90,100 @@ EOF
 
     docker push "cosmopterix/mariadb:10.0-1.0"
 
-    docker push "cosmopterix/pgsql:9.4-1.0"
-
     docker push "cosmopterix/derby:10.12-1.0"
 
     docker push "cosmopterix/hsqldb:2.3-1.0"
+
+# -----------------------------------------------------
+# Tag our latest images.
+#[user@desktop]
+
+    docker tag \
+        "cosmopterix/pgsql:9.4-1.0" \
+        "cosmopterix/pgsql:latest"
+
+    docker tag \
+        "cosmopterix/mysql:5.6-1.0" \
+        "cosmopterix/mysql:latest"
+
+    docker tag \
+        "cosmopterix/mariadb:10.0-1.0" \
+        "cosmopterix/mariadb:latest"
+
+    docker tag \
+        "cosmopterix/derby:10.12-1.0" \
+        "cosmopterix/derby:latest"
+
+    docker tag \
+        "cosmopterix/hsqldb:2.3-1.0" \
+        "cosmopterix/hsqldb:latest"
+
+# -----------------------------------------------------
+# Push our latest images.
+#[user@desktop]
+
+    docker login
+
+        Username: xxxx
+        Password: yyyy
+        Email:    zzzz
+        Login Succeeded
+
+    docker push "cosmopterix/pgsql:latest"
+
+    docker push "cosmopterix/mysql:latest"
+
+    docker push "cosmopterix/mariadb:latest"
+
+    docker push "cosmopterix/derby:latest"
+
+    docker push "cosmopterix/hsqldb:latest"
+
+# -------------------------------------------------------------------------------------------
+# Test our PostgreSQL container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_HOME:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "pgsql/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name 'albert' \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/pgsql:9.4-1.0"
+
+            docker logs --follow 'albert'
+
+            docker exec -it \
+                'albert' \
+                psql-client
+
+                SELECT id, ra, decl FROM alpha_source ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+
+                --
+
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+
+                -- PostgreSQL :
+                --  [ORDER BY sort_column] is separate
+                --  [LIMIT row_count] is separate
+                --  [OFFSET row_offset] is separate
+
+            \q
+        popd
+    popd
 
 # -------------------------------------------------------------------------------------------
 # Test our MySQL container.
@@ -202,52 +294,6 @@ EOF
                 -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 OFFSET 10 ;
                 -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT  0 OFFSET 10 ;
                 -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT -1 OFFSET 10 ;
-
-            \q
-        popd
-    popd
-
-# -------------------------------------------------------------------------------------------
-# Test our PostgreSQL container.
-#[user@desktop]
-
-    source "${HOME:?}/cosmopterix.settings"
-    pushd "${COSMOPTERIX_HOME:?}"
-
-        pushd docker
-        
-            datadir=$(mktemp -d)
-            cp "pgsql/sql/alpha-source.sql" "${datadir}/001.sql"
-            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
-
-            docker run --detach \
-                --name pgsql \
-                --volume "${datadir}:/database.init/" \
-                "cosmopterix/pgsql:9.4-1.0"
-
-            docker logs -f pgsql
-
-            docker exec -it \
-                pgsql \
-                entrypoint.sh \
-                psql
-
-                SELECT id, ra, decl FROM alpha_source ;
-                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
-                SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
-                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
-
-                --
-
-                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
-                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
-                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
-                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
-
-                -- PostgreSQL :
-                --  [ORDER BY sort_column] is separate
-                --  [LIMIT row_count] is separate
-                --  [OFFSET row_offset] is separate
 
             \q
         popd

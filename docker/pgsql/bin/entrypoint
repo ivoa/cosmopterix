@@ -210,7 +210,7 @@ then
             for file in ${databaseinit}/*
             do
                 case "${file}" in
-                    *.sh)     echo "$0: running [${file}]"; source "${file}" ; echo ;;
+                    *.sh)     echo "$0: running [${file}]"; gosu "${serveruser}" source "${file}" ; echo ;;
                     *.sql)    echo "$0: running [${file}]"; "${psqlcmd[@]}" --file "${file}" ; echo ;;
                     *.sql.gz) echo "$0: running [${file}]"; gunzip --stdout "${file}" | "${psqlcmd[@]}" ; echo ;;
                     *)        echo "$0: ignoring [${file}]" ;;
@@ -235,23 +235,11 @@ then
 
     echo ""
     echo "Starting database service"
-    gosu "${serveruser}" \
+    exec gosu "${serveruser}" \
         /usr/bin/postgres \
             -h '*' \
             -D "${serverdata}" \
             -p "${serverport}" \
-
-#
-# PostgreSQL client
-elif [ "${1}" = 'psql' ]
-then
-
-    echo ""
-    echo "Running PostgreSQL client"
-    psql \
-        --user "${databaseuser}" \
-        --dbname "${databasename}" \
-        $@
 
 #
 # User command.

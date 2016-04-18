@@ -24,20 +24,27 @@ set -euo pipefail
 IFS=$'\n\t'
 
 #
-# Load our database settings.
-source /database.saved 
-
-#
-# Create our password file
-if [ ! -e "${HOME}/.pgpass" ]
+# User configuration.
+: ${databaseconfig:=/database.config}
+if [ -e "${databaseconfig}" ]
 then
-    echo "*:*:*:${databaseuser}:${databasepass}" > "${HOME}/.pgpass"
-    chown "$(id -un)" "${HOME}/.pgpass"
-    chgrp "$(id -un)" "${HOME}/.pgpass"
-    chmod u=rw,g=,o=  "${HOME}/.pgpass"
+    source "${databaseconfig}"
 fi
 
 #
-# Connect to our database.
-eval "psql --user \"${databaseuser}\" --dbname \"${databasename}\" $@"
+# Saved configuration.
+: ${databasesave:=/database.save}
+if [ -e "${databasesave}" ]
+then
+    source "${databasesave}"
+fi
+
+#
+# Run the database client.
+echo ""
+echo "Running database client"
+exec psql \
+    --user "${databaseuser}" \
+    --dbname "${databasename}" \
+    "$@"
 

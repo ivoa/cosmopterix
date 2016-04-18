@@ -33,19 +33,19 @@ ENV serverdata /var/lib/pgsql
 VOLUME ${serverdata}
 
 #
-# Add our install scripts. 
+# Add our shell scripts. 
 COPY bin /usr/local/bin/
-RUN chmod a+x /usr/local/bin/*.sh
+RUN chmod a+x /usr/local/bin/*
 
 #
-# Run our install scripts.
-RUN /usr/local/bin/install-pgsql.sh
+# Run our install script.
+RUN /usr/local/bin/install-pgsql
 
 #
-# Install our entry point script.
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Install our entrypoint script.
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
 #
-# Set the default command.
+# The default entrypoint command.
 CMD ["start"]
 
