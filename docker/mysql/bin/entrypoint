@@ -256,7 +256,7 @@ EOF
             for file in ${databaseinit}/*
             do
                 case "${file}" in
-                    *.sh)     echo "$0: running [${file}]"; source "${file}" ;;
+                    *.sh)     echo "$0: running [${file}]"; gosu "${serveruser}" source "${file}" ;;
                     *.sql)    echo "$0: running [${file}]"; "${mysqlcmd[@]}" < "${file}" ;;
                     *.sql.gz) echo "$0: running [${file}]"; gunzip --stdout "${file}" | "${mysqlcmd[@]}" ;;
                     *)        echo "$0: ignoring [${file}]" ;;
@@ -303,21 +303,9 @@ EOF
 
     echo ""
     echo "Starting database service"
-    mysqld_safe \
+    exec mysqld_safe \
         --user="${serveruser}" \
         --datadir="${serverdata}"
-
-#
-# MySQL client
-elif [ "${1}" = 'mysql' ]
-then
-
-    shift
-
-    echo ""
-    echo "Running MySQL client"
-    mysql \
-        $@
 
 #
 # User command.
@@ -325,7 +313,6 @@ else
 
     echo ""
     echo "Running user command"
-    
     exec "$@"
 
 fi

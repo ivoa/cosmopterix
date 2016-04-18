@@ -165,7 +165,7 @@ then
         #
         # Run a local instance.
         # Does not listen on TCP/IP and waits until start finishes
-        echo "Running local PostgreSQL instance"
+        echo "Running local instance"
         gosu "${serveruser}" \
             /usr/bin/pg_ctl \
             --pgdata "${serverdata}"  \
@@ -247,7 +247,6 @@ else
 
     echo ""
     echo "Running user command"
-    
     exec "$@"
 
 fi
