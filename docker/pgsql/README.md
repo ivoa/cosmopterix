@@ -109,16 +109,7 @@ inside the container.
 
 ```Shell
     #
-    # Run a container in the background.
-    docker run \
-        --detach \
-        --name 'albert' \
-       'cosmopterix/pgsql'
-```
-
-```Shell
-    #
-    # Run a bash shell in the running container.
+    # Run a bash shell in a running container.
     docker exec \
         --tty \
         --interactive \
@@ -126,29 +117,14 @@ inside the container.
         'bash'
 
         ls -al
-        pwd
-        exit
-```
 
-```Shell
-    #
-    # Stop and remove the container.
-    docker rm $(docker stop 'albert')
+        exit
 ```
 
 The container entrypoint script saves deatils of the database configuration in a `/database.save` file inside the container.
 
 You can use the Docker `exec` command to connect to the container and read the `/database.save` config file.
 
-```Shell
-    #
-    # Run a container in the background.
-    docker run \
-        --detach \
-        --name 'albert' \
-       'cosmopterix/pgsql'
-```
- 
 ```Shell
     #
     # Display the contents of /database.save in the container.
@@ -160,23 +136,18 @@ You can use the Docker `exec` command to connect to the container and read the `
 
 ```
 
-```Shell
-    #
-    # Stop and remove the container.
-    docker rm $(docker stop 'albert')
-```
-
 The entry point script checks for a `/database.config` script file
 at startup. If the config file is found it is run using the bash shell
 `source` command.
 
-The entry point script uses `adminuser` and `adminpass` environment
-variables to configure the database server admin account.
-If the values are not specified then random default values are generated.
+This can be used to set some environment variables at the begining
+to be uused by the rest of the entrypoint script.
 
-The entry point script uses `databasename` `databaseuser` and `databasepass`
+* The entry point script uses `adminuser` and `adminpass` environment
+variables to configure the database server admin account.
+* The entry point script uses `databasename` `databaseuser` and `databasepass`
 environment variables to configure the new database.
-If the values are not specified then random default values are generated.
+* If the values are not specified then random default values are generated.
 
 You can use the Docker `--volume` option to mount a local file as `/database.config` inside the container.
 
