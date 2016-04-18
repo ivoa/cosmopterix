@@ -65,7 +65,7 @@ Naming the container makes it easier to refer to it in subsequent commands.
 
 ```Shell
     #
-    # Run a container in the background.
+    # Run a named container in the background.
     docker run \
         --detach \
         --name 'albert' \
@@ -136,6 +136,21 @@ You can use the Docker `exec` command to connect to the container and read the `
 
 ```
 
+    #
+    # Admin settings
+    admindata=postgres
+    adminuser=postgres
+    adminpass=ahdues2Aad
+
+    ....
+    
+    #
+    # Database settings
+    databasename=Kie5aeQuai
+    databaseuser=IevoB8om8o
+    databasepass=ighei0Ieyi
+
+
 The entry point script checks for a `/database.config` script file
 at startup. If the config file is found it is run using the bash shell
 `source` command.
@@ -183,6 +198,31 @@ EOF
 In this container, the adminuser will be set to `helen`, and the 
 database name and user name will be `testdb` and `stephany`.
 
+```Shell
+    #
+    # Display the contents of /database.save in the container.
+    docker exec \
+        --tty \
+        --interactive \
+        'albert' \
+        cat '/database.save'
+
+```
+
+    #
+    # Admin settings
+    admindata=postgres
+    adminuser=helen
+    adminpass=aingo2aiY4
+
+    ....
+
+    #
+    # Database settings
+    databasename=testdb
+    databaseuser=stephany
+    databasepass=ahTahbi3zo
+
 The entry point script also checks for `.sh`, `.sql` or `.sql.gz` files
 in the `/database.init/` directory inside the container.
 
@@ -228,7 +268,8 @@ Using the Docker `exec` command to run `psql-client` will launch the psql comman
         'albert' \
         'psql-client'
 
-        \l
+        \dt
+
         \q
 
 ```
