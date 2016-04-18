@@ -1,5 +1,6 @@
-This container is based on the Cosmopterix Fedora base container.
-It uses the distribution package manager to install the PostgreSQL client and server packages.
+This container is based on the Cosmopterix Fedora [base container](../fedora/23).
+
+The Docker file uses the distribution package manager to install the [PostgreSQL](http://www.postgresql.org/) database server and command line client.
 
 Running the container with no arguments will create a new database, with random database name, user name and password.
 
