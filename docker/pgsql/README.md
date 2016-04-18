@@ -23,11 +23,18 @@ Naming the container makes it easier to refer to the container in subsequent com
         --follow \
         'albert'
 
+    docker stop \
+        'albert'
+
+    docker rm \
+        --volumes \
+        'albert'
+
 ```
 
 The container also includes the corresponding `psql` commandline client.
 
-The passing `psql` to the Docker `exec` command will run the commandline client and connect it to the new database.
+The passing `psql` to the Docker `entrypoint` script will run the commandline client and connect it to the new database.
 
 ```Shell
     docker run \
@@ -39,6 +46,7 @@ The passing `psql` to the Docker `exec` command will run the commandline client 
         --tty \
         --interactive \
         'albert' \
+        'entrypoint.sh' \
         'psql'
 
         \l
