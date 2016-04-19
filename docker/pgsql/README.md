@@ -38,7 +38,6 @@ The entrypoint script saves deatils of the database configuration in a `/databas
     databasename=Kie5aeQuai
     databaseuser=IevoB8om8o
     databasepass=ighei0Ieyi
-
 ```
 
 The entry point script checks for a `/database.config` script file
@@ -176,7 +175,7 @@ from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
 
 The container image also includes a startup script for the the`psql` commandline client.
 
-Using the Docker `exec` command to run `psql-client` will launch the psql commandline client and automatically connect it to the new database.
+Using the Docker `exec` command to run `psql-client` will launch the psql commandline client and automatically connects it to the new database.
 
 ```
     docker exec \
@@ -212,7 +211,6 @@ EOF
     cp "mysql/sql/alpha-source.sql" "${tempdir}/001.sql"
     cp "data/alpha-source-data.sql" "${tempdir}/002.sql"
 
-
     #
     # Run our database container with ${tempcfg} mounted
     # as /database.config inside the container
@@ -222,7 +220,6 @@ EOF
         --volume "${tempdir}:/database.init/" \
         --volume "${tempcfg}:/database.config" \
        'cosmopterix/pgsql'
-
 
     #
     # Login and run a test.

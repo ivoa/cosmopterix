@@ -4,128 +4,19 @@ The Docker file uses the distribution package manager to install the [MySQL](htt
 
 Running the container with no arguments will create a new database, with random database name, user name and password.
 
-```Shell
-    #
-    # Run a container in the foreground. 
-    docker run \
-       'cosmopterix/mysql'
 ```
-
-    Checking data directory [/var/lib/mysql]
-    Updating data directory [/var/lib/mysql]
-    Checking socket directory [/var/lib/mysql]
-    Checking for database data [mysql]
-    Creating database data [mysql]
-    ....
-    ....
-    Configuring admin account [root]
-    Checking user database [Ce8cu9aigh]
-    Creating user database [Ce8cu9aigh]
-    Checking user account [quuPaa6aik]
-    Creating user account [quuPaa6aik]
-    Creating user access [quuPaa6aik][Ce8cu9aigh]
-    ....
-    ....
-    Initialization process complete.
-    Starting database service
-    
-
-When running in the foreground, you can use `Ctrl+C` to stop the container.
-
-The Docker `--detach` option will run the container in the background.
-
-```Shell
     #
     # Run a container in the background. 
     docker run \
         --detach \
-       'cosmopterix/mysql'
-```
-
-The Docker `ps` command will list running containers.
-
-```Shell
-    #
-    # List the active containers.
-    docker ps
-```
-
-    CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
-    65cfe76c7108        cosmopterix/mysql   "/usr/local/bin/entry"   10 seconds ago      Up 8 seconds        3306/tcp            drunk_banach
-
-When running in the background, you need to use use the Docker `stop` command with either the container id or name to stop the container.
-
-```Shell
-    #
-    # Stop an active container.
-    docker stop 65cfe76c7108
-```
-
-Naming the container makes it easier to refer to it in subsequent commands.
-
-```Shell
-    #
-    # Run a named container in the background.
-    docker run \
-        --detach \
         --name 'albert' \
        'cosmopterix/mysql'
+
 ```
 
-```Shell
-    #
-    # List the active containers.
-    docker ps
+The entrypoint script saves deatils of the database configuration in a `/database.save` file inside the container.
+
 ```
-
-    CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
-    b53fff192f72        cosmopterix/mysql   "/usr/local/bin/entry"   9 seconds ago       Up 9 seconds        3306/tcp            albert
-
-To use the same name again you need to stop and then remove the container. 
-
-```Shell
-    #
-    # Stop an active container.
-    docker stop albert
-```
-
-```Shell
-    #
-    # Remove a container.
-    docker rm albert
-```
-
-The stop and remove steps can be nested together as a single command using `$()` .
-
-```Shell
-    #
-    # Stop and remove the container.
-    docker rm $(docker stop 'albert')
-```
-
-The Docker `exec` command can be used to connect to a running container and run
-another program, for example the following command will start a bash shell
-inside the container.
-
-```Shell
-    #
-    # Run a bash shell in a running container.
-    docker exec \
-        --tty \
-        --interactive \
-        'albert' \
-        'bash'
-
-        ls -al
-
-        exit
-```
-
-The container entrypoint script saves deatils of the database configuration in a `/database.save` file inside the container.
-
-You can use the Docker `exec` command to connect to the container and read the `/database.save` config file.
-
-```Shell
     #
     # Display the contents of /database.save in the container.
     docker exec \
@@ -133,8 +24,6 @@ You can use the Docker `exec` command to connect to the container and read the `
         --interactive \
         'albert' \
         cat '/database.save'
-
-```
 
     #
     # Admin settings
@@ -149,24 +38,24 @@ You can use the Docker `exec` command to connect to the container and read the `
     databasename=Oreeleif3i
     databaseuser=Hiegh4ooyu
     databasepass=Aht3Shisho
+```
 
 The entry point script checks for a `/database.config` script file
-at startup. If the config file is found it is run using the bash shell
-`source` command.
+at startup. If the config file is found it is executed using the
+bash `source` command.
 
-This can be used to set some environment variables at the begining
-to be uused by the rest of the entrypoint script.
+This provides a method for setting environment variables at the
+begining of the initialization process which can then be used  by
+the rest of the entrypoint script.
 
 * The entry point script uses `adminuser` and `adminpass` environment
-variables to configure the database server admin account.
+variables to configure the server admin account.
 * The entry point script uses `databasename` `databaseuser` and `databasepass`
 environment variables to configure the new database.
-* If the values are not specified then random default values are generated.
+* If the user names and passwords are not specified then random default
+values are generated.
 
-You can use the Docker `--volume` option to mount a local file as `/database.config` inside the container.
-
-```Shell
-
+```
     #
     # Create a temp file.
     tempcfg=$(mktemp)
@@ -174,10 +63,8 @@ You can use the Docker `--volume` option to mount a local file as `/database.con
     #
     # Write to our database config.
     cat > "${tempcfg:?}" << EOF
-
 adminuser=helen
 adminpass=$(pwgen 10 1)
-
 databasename=testdb
 databaseuser=stephany
 databasepass=$(pwgen 10 1)
@@ -197,7 +84,7 @@ EOF
 In this container, the adminuser will be set to `helen`, and the 
 database name and user name will be `testdb` and `stephany`.
 
-```Shell
+```
     #
     # Display the contents of /database.save in the container.
     docker exec \
@@ -205,8 +92,6 @@ database name and user name will be `testdb` and `stephany`.
         --interactive \
         'albert' \
         cat '/database.save'
-
-```
 
     #
     # Admin settings
@@ -222,16 +107,18 @@ database name and user name will be `testdb` and `stephany`.
     databaseuser=stephany
     databasepass=ahTahbi3zo
 
+```
+
 The entry point script also checks for `.sh`, `.sql` or `.sql.gz` files
 in the `/database.init/` directory inside the container.
 
-* Shell script, `*.sh`, files will be run inside the container.
+* Shell script, `*.sh`, files will be executed inside the container using the database server login.
 * SQL, `*.sql`, files will be run on the new database using the `mysql` command line client.
 * Gzipped, `*.sql.gz`, files will be unzipped and then run on the new database using the `mysql` command line client.
 
 You can use the Docker `--volume` option to mount a local directory as `/database.init/` inside the container.
 
-```Shell
+```
 
     #
     # Create a temp directory.
@@ -253,15 +140,16 @@ You can use the Docker `--volume` option to mount a local directory as `/databas
 
 ```
 
-In this container, the new database will have been initialized with the SQL
-commands from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
+In this container, the new database will be initialized with the SQL commands
+from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
 
-```Shell
+```
     docker logs \
         --follow \
         'albert'
-```
 
+    ....
+    ....
     Running local instance
     ....
     Checking user database [eiGheeseM0]
@@ -277,11 +165,13 @@ commands from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
     /usr/local/bin/entrypoint: running [/database.init/002.sql]
     ....
 
+```
+
 The container image also includes a startup script for the the`mysql` commandline client.
 
-Using the Docker `exec` command to run `mysql-client` will launch the mysql commandline client and automatically connect it to the new database.
+Using the Docker `exec` command to run `mysql-client` will launch the mysql commandline client and automatically connects it to the new database.
 
-```Shell
+```
     docker exec \
         --tty \
         --interactive \
@@ -299,15 +189,11 @@ specific username and passwords, initialise the database with
 data from our SQL scripts, and then login
 and run our tests.
 
-```Shell
-
+```
     #
     # Create our config file.
-.    tempcfg=$(mktemp)
+    tempcfg=$(mktemp)
     cat > "${tempcfg:?}" << EOF
-adminuser=helen
-adminpass=$(pwgen 10 1)
-
 databasename=testdb
 databaseuser=stephany
 databasepass=$(pwgen 10 1)
