@@ -250,7 +250,7 @@ You can use the Docker `--volume` option to mount a local directory as `/databas
 In this container, the new database will have been initialized with the SQL
 commands from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
 
-```Shell
+```
     docker logs \
         --follow \
         'albert'
