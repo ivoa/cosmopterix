@@ -51,14 +51,14 @@ The Docker `ps` command will list running containers.
 ```
 
     CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
-    9b9635dd4587        cosmopterix/mysql   "/usr/local/bin/entry"   3 seconds ago       Up 2 seconds        3306/tcp            hungry_aryabhata
+    65cfe76c7108        cosmopterix/mysql   "/usr/local/bin/entry"   10 seconds ago      Up 8 seconds        3306/tcp            drunk_banach
 
 When running in the background, you need to use use the Docker `stop` command with either the container id or name to stop the container.
 
 ```Shell
     #
     # Stop an active container.
-    docker stop 9b9635dd4587
+    docker stop 65cfe76c7108
 ```
 
 Naming the container makes it easier to refer to it in subsequent commands.
@@ -79,7 +79,7 @@ Naming the container makes it easier to refer to it in subsequent commands.
 ```
 
     CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
-    1fd0fbc7167e        cosmopterix/mysql   "/usr/local/bin/entry"   6 seconds ago       Up 5 seconds        3306/tcp            albert
+    b53fff192f72        cosmopterix/mysql   "/usr/local/bin/entry"   9 seconds ago       Up 9 seconds        3306/tcp            albert
 
 To use the same name again you need to stop and then remove the container. 
 
@@ -164,7 +164,6 @@ environment variables to configure the new database.
 * If the values are not specified then random default values are generated.
 
 You can use the Docker `--volume` option to mount a local file as `/database.config` inside the container.
-
 
 ```Shell
 
@@ -304,7 +303,7 @@ and run our tests.
 
     #
     # Create our config file.
-    tempcfg=$(mktemp)
+.    tempcfg=$(mktemp)
     cat > "${tempcfg:?}" << EOF
 adminuser=helen
 adminpass=$(pwgen 10 1)
