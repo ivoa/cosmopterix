@@ -147,20 +147,19 @@ You can use the Docker `exec` command to connect to the container and read the `
 ```
 
 The entry point script checks for a `/database.config` script file
-at startup. If the config file is found it is run using the bash shell
-`source` command.
+at startup. If the config file is found it is executed using the
+bash `source` command.
 
-This can be used to set some environment variables at the begining
-to be uused by the rest of the entrypoint script.
+This provides a method for setting environment variables at the
+begining of the initialization process which can then be used  by
+the rest of the entrypoint script.
 
 * The entry point script uses `adminuser` and `adminpass` environment
-variables to configure the database server admin account.
+variables to configure the server admin account.
 * The entry point script uses `databasename` `databaseuser` and `databasepass`
 environment variables to configure the new database.
-* If the values are not specified then random default values are generated.
-
-You can use the Docker `--volume` option to mount a local file as `/database.config` inside the container.
-
+* If the user names and passwords are not specified then random default
+values are generated.
 
 ```
     #
@@ -219,7 +218,7 @@ database name and user name will be `testdb` and `stephany`.
 The entry point script also checks for `.sh`, `.sql` or `.sql.gz` files
 in the `/database.init/` directory inside the container.
 
-* Shell script, `*.sh`, files will be run as root inside the container.
+* Shell script, `*.sh`, files will be executed inside the container using the database server login.
 * SQL, `*.sql`, files will be run on the new database using the `psql` command line client.
 * Gzipped, `*.sql.gz`, files will be unzipped and then run on the new database using the `psql` command line client.
 
@@ -247,8 +246,8 @@ You can use the Docker `--volume` option to mount a local directory as `/databas
 
 ```
 
-In this container, the new database will have been initialized with the SQL
-commands from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
+In this container, the new database will be initialized with the SQL commands
+from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
 
 ```
     docker logs \

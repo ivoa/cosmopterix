@@ -113,7 +113,7 @@ database name and user name will be `testdb` and `stephany`.
 The entry point script also checks for `.sh`, `.sql` or `.sql.gz` files
 in the `/database.init/` directory inside the container.
 
-* Shell script, `*.sh`, files will be run as root inside the container.
+* Shell script, `*.sh`, files will be executed inside the container using the database server login.
 * SQL, `*.sql`, files will be run on the new database using the `psql` command line client.
 * Gzipped, `*.sql.gz`, files will be unzipped and then run on the new database using the `psql` command line client.
 
@@ -141,7 +141,7 @@ You can use the Docker `--volume` option to mount a local directory as `/databas
 
 ```
 
-In this container, the new database is initialized with the SQL commands
+In this container, the new database will be initialized with the SQL commands
 from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
 
 ```
