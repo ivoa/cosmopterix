@@ -4,12 +4,11 @@ The Docker file uses the distribution package manager to install the [PostgreSQL
 
 Running the container with no arguments will create a new database, with random database name, user name and password.
 
-```Shell
+```
     #
     # Run a container in the foreground. 
     docker run \
        'cosmopterix/pgsql'
-```
 
     Checking database directory [/var/lib/pgsql]
     Updating database directory [/var/lib/pgsql]
@@ -34,7 +33,7 @@ When running in the foreground, you can use `Ctrl+C` to stop the container.
 
 The Docker `--detach` option will run the container in the background.
 
-```Shell
+```
     #
     # Run a container in the background. 
     docker run \
@@ -44,18 +43,18 @@ The Docker `--detach` option will run the container in the background.
 
 The Docker `ps` command will list running containers.
 
-```Shell
+```
     #
     # List the active containers.
     docker ps
-```
 
     CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
     9b9635dd4587        cosmopterix/pgsql   "/usr/local/bin/entry"   3 seconds ago       Up 2 seconds        5432/tcp            hungry_aryabhata
+```
 
 When running in the background, you need to use use the Docker `stop` command with either the container id or name to stop the container.
 
-```Shell
+```
     #
     # Stop an active container.
     docker stop 9b9635dd4587
@@ -63,7 +62,7 @@ When running in the background, you need to use use the Docker `stop` command wi
 
 Naming the container makes it easier to refer to it in subsequent commands.
 
-```Shell
+```
     #
     # Run a named container in the background.
     docker run \
@@ -72,32 +71,29 @@ Naming the container makes it easier to refer to it in subsequent commands.
        'cosmopterix/pgsql'
 ```
 
-```Shell
+```
     #
     # List the active containers.
     docker ps
-```
 
     CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
     668c480863b2        cosmopterix/pgsql   "/usr/local/bin/entry"   3 seconds ago       Up 2 seconds        5432/tcp            albert
 
 To use the same name again you need to stop and then remove the container. 
 
-```Shell
+```
     #
     # Stop an active container.
     docker stop albert
-```
 
-```Shell
     #
     # Remove a container.
     docker rm albert
 ```
 
-The stop and remove steps can be nested together as a single command using `$()` .
+The stop and remove commands can be nested together as a single command using `$()` .
 
-```Shell
+```
     #
     # Stop and remove the container.
     docker rm $(docker stop 'albert')
@@ -107,7 +103,7 @@ The Docker `exec` command can be used to connect to a running container and run
 another program, for example the following command will start a bash shell
 inside the container.
 
-```Shell
+```
     #
     # Run a bash shell in a running container.
     docker exec \
@@ -125,7 +121,7 @@ The container entrypoint script saves deatils of the database configuration in a
 
 You can use the Docker `exec` command to connect to the container and read the `/database.save` config file.
 
-```Shell
+```
     #
     # Display the contents of /database.save in the container.
     docker exec \
@@ -133,8 +129,6 @@ You can use the Docker `exec` command to connect to the container and read the `
         --interactive \
         'albert' \
         cat '/database.save'
-
-```
 
     #
     # Admin settings
@@ -149,6 +143,8 @@ You can use the Docker `exec` command to connect to the container and read the `
     databasename=Kie5aeQuai
     databaseuser=IevoB8om8o
     databasepass=ighei0Ieyi
+
+```
 
 The entry point script checks for a `/database.config` script file
 at startup. If the config file is found it is run using the bash shell
@@ -166,8 +162,7 @@ environment variables to configure the new database.
 You can use the Docker `--volume` option to mount a local file as `/database.config` inside the container.
 
 
-```Shell
-
+```
     #
     # Create a temp file.
     tempcfg=$(mktemp)
@@ -175,10 +170,8 @@ You can use the Docker `--volume` option to mount a local file as `/database.con
     #
     # Write to our database config.
     cat > "${tempcfg:?}" << EOF
-
 adminuser=helen
 adminpass=$(pwgen 10 1)
-
 databasename=testdb
 databaseuser=stephany
 databasepass=$(pwgen 10 1)
@@ -198,7 +191,7 @@ EOF
 In this container, the adminuser will be set to `helen`, and the 
 database name and user name will be `testdb` and `stephany`.
 
-```Shell
+```
     #
     # Display the contents of /database.save in the container.
     docker exec \
@@ -206,8 +199,6 @@ database name and user name will be `testdb` and `stephany`.
         --interactive \
         'albert' \
         cat '/database.save'
-
-```
 
     #
     # Admin settings
@@ -223,6 +214,8 @@ database name and user name will be `testdb` and `stephany`.
     databaseuser=stephany
     databasepass=ahTahbi3zo
 
+```
+
 The entry point script also checks for `.sh`, `.sql` or `.sql.gz` files
 in the `/database.init/` directory inside the container.
 
@@ -232,7 +225,7 @@ in the `/database.init/` directory inside the container.
 
 You can use the Docker `--volume` option to mount a local directory as `/database.init/` inside the container.
 
-```Shell
+```
 
     #
     # Create a temp directory.
@@ -261,8 +254,9 @@ commands from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
     docker logs \
         --follow \
         'albert'
-```
 
+    ....
+    ....
     Running local instance
     ....
     Checking database user [sei5aijeiL]
@@ -284,12 +278,13 @@ commands from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
     INSERT 0 1
     ....
 
+```
 
 The container image also includes a startup script for the the`psql` commandline client.
 
 Using the Docker `exec` command to run `psql-client` will launch the psql commandline client and automatically connect it to the new database.
 
-```Shell
+```
     docker exec \
         --tty \
         --interactive \
@@ -307,15 +302,11 @@ specific username and passwords, initialise the database with
 data from our SQL scripts, and then login
 and run our tests.
 
-```Shell
-
+```
     #
     # Create our config file.
     tempcfg=$(mktemp)
     cat > "${tempcfg:?}" << EOF
-adminuser=helen
-adminpass=$(pwgen 10 1)
-
 databasename=testdb
 databaseuser=stephany
 databasepass=$(pwgen 10 1)
