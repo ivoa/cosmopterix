@@ -6,15 +6,120 @@ Running the container with no arguments will create a new database, with random 
 
 ```
     #
+    # Run a container in the foreground. 
+    docker run \
+       'cosmopterix/pgsql'
+
+    Checking database directory [/var/lib/pgsql]
+    Updating database directory [/var/lib/pgsql]
+    Checking socket directory [/var/lib/pgsql]
+    Checking for database data [postgres]
+    Creating database data [postgres]
+    ....
+    ....
+    Checking database user [neDei3iewa]
+    Creating database user [neDei3iewa]
+    CREATE ROLE
+    Checking database data [Athie6uJ0i]
+    Creating database data [Athie6uJ0i]
+    CREATE DATABASE
+    ....
+    ....
+    Initialization process complete.
+    Starting database service
+    
+
+When running in the foreground, you can use `Ctrl+C` to stop the container.
+
+The Docker `--detach` option will run the container in the background.
+
+```
+    #
     # Run a container in the background. 
+    docker run \
+        --detach \
+       'cosmopterix/pgsql'
+```
+
+The Docker `ps` command will list running containers.
+
+```
+    #
+    # List the active containers.
+    docker ps
+
+    CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+    9b9635dd4587        cosmopterix/pgsql   "/usr/local/bin/entry"   3 seconds ago       Up 2 seconds        5432/tcp            hungry_aryabhata
+```
+
+When running in the background, you need to use use the Docker `stop` command with either the container id or name to stop the container.
+
+```
+    #
+    # Stop an active container.
+    docker stop 9b9635dd4587
+```
+
+Naming the container makes it easier to refer to it in subsequent commands.
+
+```
+    #
+    # Run a named container in the background.
     docker run \
         --detach \
         --name 'albert' \
        'cosmopterix/pgsql'
-
 ```
 
-The entrypoint script saves deatils of the database configuration in a `/database.save` file inside the container.
+```
+    #
+    # List the active containers.
+    docker ps
+
+    CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+    668c480863b2        cosmopterix/pgsql   "/usr/local/bin/entry"   3 seconds ago       Up 2 seconds        5432/tcp            albert
+
+To use the same name again you need to stop and then remove the container. 
+
+```
+    #
+    # Stop an active container.
+    docker stop albert
+
+    #
+    # Remove a container.
+    docker rm albert
+```
+
+The stop and remove commands can be nested together as a single command using `$()` .
+
+```
+    #
+    # Stop and remove the container.
+    docker rm $(docker stop 'albert')
+```
+
+The Docker `exec` command can be used to connect to a running container and run
+another program, for example the following command will start a bash shell
+inside the container.
+
+```
+    #
+    # Run a bash shell in a running container.
+    docker exec \
+        --tty \
+        --interactive \
+        'albert' \
+        'bash'
+
+        ls -al
+
+        exit
+```
+
+The container entrypoint script saves deatils of the database configuration in a `/database.save` file inside the container.
+
+You can use the Docker `exec` command to connect to the container and read the `/database.save` config file.
 
 ```
     #
@@ -49,11 +154,13 @@ This can be used to set some environment variables at the begining
 to be uused by the rest of the entrypoint script.
 
 * The entry point script uses `adminuser` and `adminpass` environment
-variables to configure the server admin account.
+variables to configure the database server admin account.
 * The entry point script uses `databasename` `databaseuser` and `databasepass`
 environment variables to configure the new database.
-* If the user names and passwords are not specified then random default
-values are generated.
+* If the values are not specified then random default values are generated.
+
+You can use the Docker `--volume` option to mount a local file as `/database.config` inside the container.
+
 
 ```
     #
@@ -140,8 +247,8 @@ You can use the Docker `--volume` option to mount a local directory as `/databas
 
 ```
 
-In this container, the new database is initialized with the SQL commands
-from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
+In this container, the new database will have been initialized with the SQL
+commands from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
 
 ```
     docker logs \
