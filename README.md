@@ -3,7 +3,7 @@ Named after the <a href='http://ukmoths.org.uk/systematic-list/#Cosmopteriginae'
 
 Create a set of Docker containers for each of the main database platforms that are used within the IVOA.
 
-The aim is to make it easy to SQL commands across the different platform by configuring them all in the same way, using the same commands to create a database and to run the command line client for each platform.
+The aim is to make it easy to test SQL queries across the different platforms by configuring them all in the same way, using the same commands to create a database and to run the command line client for each platform.
 
 Cross platform SQL tests :
 * [OFFSET and LIMIT](wiki/OFFSET)
