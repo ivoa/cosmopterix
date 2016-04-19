@@ -8,7 +8,7 @@ The aim is to create a framework that makes it easy to experiment with SQL queri
 The test framework enables us to verify that any proposed changes to the ADQL grammar and syntax are in fact implementable on all of the target platforms. 
 
 Cross platform SQL tests :
-* [OFFSET and LIMIT](/wiki/OFFSET-and-LIMIT)
+* [OFFSET and LIMIT](wiki/OFFSET-and-LIMIT)
 
 Working containers for :
 * [PostgreSQL](docker/pgsql)
