@@ -5,6 +5,9 @@ Create a set of Docker containers for each of the main database platforms that a
 
 The aim is to make it easy to SQL commands across the different platform by configuring them all in the same way, using the same commands to create a database and to run the command line client for each platform.
 
+Cross platform SQL tests :
+* [OFFSET and LIMIT](wiki/OFFSET)
+
 Working containers for :
 * [PostgreSQL](docker/pgsql)
 * [MySQL](docker/mysql)
