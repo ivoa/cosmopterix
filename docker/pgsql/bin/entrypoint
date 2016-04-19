@@ -151,7 +151,7 @@ then
         chgrp "${serveruser}" ${pwfile}
         chmod 'u=r,g=,o=' ${pwfile}
         
-        gosu postgres \
+        gosu "${serveruser}" \
             /usr/bin/initdb \
             --auth     md5 \
             --pgdata   ${serverdata} \

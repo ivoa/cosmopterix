@@ -42,11 +42,12 @@ The entrypoint script saves deatils of the database configuration in a `/databas
 ```
 
 The entry point script checks for a `/database.config` script file
-at startup. If the config file is found it is run using the bash shell
-`source` command.
+at startup. If the config file is found it is executed using the
+bash `source` command.
 
-This can be used to set some environment variables at the begining
-to be uused by the rest of the entrypoint script.
+This provides a method for setting environment variables at the
+begining of the initialization process which can then be used  by
+the rest of the entrypoint script.
 
 * The entry point script uses `adminuser` and `adminpass` environment
 variables to configure the server admin account.
