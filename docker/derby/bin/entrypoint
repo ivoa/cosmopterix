@@ -184,7 +184,7 @@ then
             echo "Running init scripts"
             for file in ${databaseinit}/*; do
                 case "${file}" in
-                    *.sh)     echo "$0: running [${file}]"; source "${file}" ; echo ;;
+                    *.sh)     echo "$0: running [${file}]"; gosu "${serveruser}" source "${file}" ; echo ;;
                     *.sql)    echo "$0: running [${file}]"; cat "${file}" | "${derbycmd[@]}" ; echo ;;
                     *.sql.gz) echo "$0: running [${file}]"; gunzip --stdout "${file}" | "${derbycmd[@]}" ; echo ;;
                     *)        echo "$0: ignoring [${file}]" ;;
@@ -202,16 +202,13 @@ then
     echo "Starting database service"
     #TODO Replace pushd with properties
     pushd "${serverdata}"
-        gosu "${serveruser}" \
+        exec gosu "${serveruser}" \
             java \
             -classpath ${derbylib} \
             -jar ${derbylib}/derbyrun.jar \
             server \
             start
     popd
-
-#
-# TODO SQLTool client ?
 
 #
 # Derby client.

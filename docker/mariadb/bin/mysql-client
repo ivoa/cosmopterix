@@ -44,5 +44,5 @@ fi
 echo ""
 echo "Running database client"
 exec mysql \
-    "$@"
+    $@
 

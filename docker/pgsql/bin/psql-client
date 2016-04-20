@@ -46,5 +46,5 @@ echo "Running database client"
 exec psql \
     --user "${databaseuser}" \
     --dbname "${databasename}" \
-    "$@"
+    $@
 

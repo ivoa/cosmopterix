@@ -305,7 +305,7 @@ EOF
     echo "Starting database service"
     exec gosu "${serveruser}" \
         mysqld_safe \
-            --datadir="${serverdata}"
+            --datadir "${serverdata}"
 
 #
 # User command.

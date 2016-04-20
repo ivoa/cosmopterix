@@ -39,15 +39,15 @@ VOLUME ${serverdata}
 #
 # Add our install scripts. 
 COPY bin /usr/local/bin/
-RUN chmod a+x /usr/local/bin/*.sh
+RUN chmod a+x /usr/local/bin/*
 
 #
 # Run our install scripts.
-RUN /usr/local/bin/install-derby.sh
+RUN /usr/local/bin/install-derby
 
 #
 # Install our entry point script.
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
 #
 # Set the default command.

@@ -17,6 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+
 #
 # Strict error checking.
 # http://redsymbol.net/articles/unofficial-bash-strict-mode/
@@ -24,13 +25,29 @@ set -euo pipefail
 IFS=$'\n\t'
 
 #
-# Load our database settings.
-source /database.settings 
+# User configuration.
+: ${databaseconfig:=/database.config}
+if [ -e "${databaseconfig}" ]
+then
+    source "${databaseconfig}"
+fi
 
 #
-# Connect to our database.
-java -classpath "${derbylib}" \
+# Saved configuration.
+: ${databasesave:=/database.save}
+if [ -e "${databasesave}" ]
+then
+    source "${databasesave}"
+fi
+
+#
+# Run the database client.
+echo ""
+echo "Running Derby ij client"
+java \
+    -classpath "${derbylib}" \
     -Dij.database=jdbc:derby://localhost:${serverport}/${databasename} \
     -jar "${derbylib}/derbyrun.jar" \
-    ij
+    ij \
+    $@
 

@@ -243,7 +243,7 @@ EOF
             for file in ${databaseinit}/*
             do
                 case "${file}" in
-                    *.sh)     echo "$0: running [${file}]"; source "${file}" ; echo ;;
+                    *.sh)     echo "$0: running [${file}]"; gosu "${serveruser}" source "${file}" ; echo ;;
                     *.sql)    echo "$0: running [${file}]"; "${mysqlcmd[@]}" < "${file}" ; echo ;;
                     *.sql.gz) echo "$0: running [${file}]"; gunzip --stdout "${file}" | "${mysqlcmd[@]}" ; echo ;;
                     *)        echo "$0: ignoring [${file}]" ;;
@@ -283,18 +283,9 @@ EOF
 
     echo ""
     echo "Starting database service"
-    gosu "${serveruser}" \
+    exec gosu "${serveruser}" \
         mysqld_safe \
             --datadir "${serverdata}"
-
-#
-# MariaDB client
-elif [ "${1}" = 'mysql' ]
-then
-
-    echo ""
-    echo "Running MariaDB client"
-    mysql
 
 #
 # User command.
