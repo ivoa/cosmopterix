@@ -210,10 +210,10 @@ then
             for file in ${databaseinit}/*
             do
                 case "${file}" in
-                    *.sh)     echo "$0: running [${file}]"; source "${file}" ; echo ;;
-                    *.sql)    echo "$0: running [${file}]"; "${psqlcmd[@]}" --file "${file}" ; echo ;;
-                    *.sql.gz) echo "$0: running [${file}]"; gunzip --stdout "${file}" | "${psqlcmd[@]}" ; echo ;;
-                    *)        echo "$0: ignoring [${file}]" ;;
+                    *.sh)     echo "Running [${file}]"; source "${file}" ; echo ;;
+                    *.sql)    echo "Running [${file}]"; "${psqlcmd[@]}" --file "${file}" ; echo ;;
+                    *.sql.gz) echo "Running [${file}]"; gunzip --stdout "${file}" | "${psqlcmd[@]}" ; echo ;;
+                    *)        echo "Ignoring [${file}]" ;;
                 esac
             done
         fi

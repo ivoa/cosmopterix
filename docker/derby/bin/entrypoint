@@ -184,10 +184,10 @@ then
             echo "Running init scripts"
             for file in ${databaseinit}/*; do
                 case "${file}" in
-                    *.sh)     echo "$0: running [${file}]"; source "${file}" ; echo ;;
-                    *.sql)    echo "$0: running [${file}]"; cat "${file}" | "${derbycmd[@]}" ; echo ;;
-                    *.sql.gz) echo "$0: running [${file}]"; gunzip --stdout "${file}" | "${derbycmd[@]}" ; echo ;;
-                    *)        echo "$0: ignoring [${file}]" ;;
+                    *.sh)     echo "Running [${file}]"; source "${file}" ; echo ;;
+                    *.sql)    echo "Running [${file}]"; cat "${file}" | "${derbycmd[@]}" ; echo ;;
+                    *.sql.gz) echo "Running [${file}]"; gunzip --stdout "${file}" | "${derbycmd[@]}" ; echo ;;
+                    *)        echo "Ignoring [${file}]" ;;
                 esac
             done
         fi

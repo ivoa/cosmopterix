@@ -1,5 +1,5 @@
 This container is based on the Cosmopterix [Java](../java/8) base container.
-The container build script downloads and installs version 10.12.1.1 of the [Apache Derby](https://db.apache.org/derby/)
+The container build script downloads and installs version 2.3.3 of the [HyperSQL](http://hsqldb.org/)
 database from the Apache website.
 
 Running the container with no arguments will create a new database, with random database name, user name and password.
@@ -10,7 +10,7 @@ Running the container with no arguments will create a new database, with random 
     docker run \
         --detach \
         --name 'albert' \
-       'cosmopterix/derby'
+       'cosmopterix/hsqldb'
 
 ```
 
@@ -26,28 +26,23 @@ The entrypoint script saves details of the database configuration in a `/databas
         cat '/database.save'
 
             #
-            # Admin settings
-            adminuser=derby
-            adminpass=Ciewila2di
-
-            #
             # System settings
-            serveruser=derby
-            serverdata=/var/lib/derby
-            serverport=1527
+            serveruser=hsqldb
+            serverdata=/var/lib/hsqldb
+            serverport=9001
             serveripv4=0.0.0.0
 
             #
-            # Derby settings
-            derbybin=/usr/lib/derby/db-derby-10.12.1.1-bin
-            derbylib=/usr/lib/derby/db-derby-10.12.1.1-bin/lib
-            derbyversion=10.12.1.1
+            # HSQLDB settings
+            hsqldbbin=/usr/lib/hsqldb/hsqldb-2.3.3/hsqldb/bin
+            hsqldblib=/usr/lib/hsqldb/hsqldb-2.3.3/hsqldb/lib
+            hsqldbversion=2.3.3
 
             #
             # Database settings
-            databasename=Zatha0ohpa
-            databaseuser=ahpod7eeWu
-            databasepass=taiseh3Ahh
+            databasename=thi6Pae3ah
+            databaseuser=Eet0iex4zu
+            databasepass=Chet4Eo8oo
 
 ```
 
@@ -84,7 +79,7 @@ EOF
         --detach \
         --name 'albert' \
         --volume "${tempcfg}:/database.config" \
-       'cosmopterix/derby'
+       'cosmopterix/hsqldb'
 
 ```
 
@@ -101,11 +96,12 @@ set to `testdb` and `stephany`.
         cat '/database.save'
 
             ....
+            ....
             #
             # Database settings
             databasename=testdb
             databaseuser=stephany
-            databasepass=joo9Liephe
+            databasepass=ooph8XohGu
 
 ```
 
@@ -126,7 +122,7 @@ You can use the Docker `--volume` option to mount a local directory as `/databas
     
     #
     # Copy our SQL scripts into the temp directory
-    cp "derby/sql/alpha-source.sql" "${tempdir}/001.sql"
+    cp "hsqldb/sql/alpha-source.sql" "${tempdir}/001.sql"
     cp "data/alpha-source-data.sql" "${tempdir}/002.sql"
 
     #
@@ -136,7 +132,7 @@ You can use the Docker `--volume` option to mount a local directory as `/databas
         --detach \
         --name 'albert' \
         --volume "${tempdir}:/database.init/" \
-       'cosmopterix/derby'
+       'cosmopterix/hsqldb'
 
 ```
 
@@ -151,31 +147,35 @@ from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
             ....
             Running init scripts
             Running [/database.init/001.sql]
-                ij version 10.12
-                CONNECTION0* - 	jdbc:derby:Medainoo9i
+
+                SqlTool v. 5337.
+                JDBC Connection established to a HSQL Database Engine v. 2.3.3 database
+                as "jeipeeFi5y" with R/W TRANSACTION_READ_COMMITTED Isolation.
                 ....
 
             Running [/database.init/002.sql]
-                ij version 10.12
-                CONNECTION0* - 	jdbc:derby:Medainoo9i
+
+                SqlTool v. 5337.
+                JDBC Connection established to a HSQL Database Engine v. 2.3.3 database
+                as "jeipeeFi5y" with R/W TRANSACTION_READ_COMMITTED Isolation.
                 ....
 
 ```
 
-The container image also includes a startup script for the `ij` commandline client.
+The container image also includes a startup script for the `SqlTool` commandline client.
 
-Using the Docker `exec` command to run `derby-client` will launch the `ij` commandline client and automatically connect it to the database.
+Using the Docker `exec` command to run `hsqldb-client` will launch the `SqlTool` commandline client and automatically connect it to the database.
 
 ```
     docker exec \
         --tty \
         --interactive \
         'albert' \
-        'derby-client'
+        'hsqldb-client'
 
-            SHOW TABLES ;
+            \dt
 
-            EXIT;
+            \q
 
 ```
 
@@ -186,7 +186,7 @@ and then login and run our tests.
     #
     # Create our scripts directory.
     tempdir=$(mktemp -d)
-    cp "mysql/sql/alpha-source.sql" "${tempdir}/001.sql"
+    cp "hsqldb/sql/alpha-source.sql" "${tempdir}/001.sql"
     cp "data/alpha-source-data.sql" "${tempdir}/002.sql"
 
     #
@@ -197,7 +197,7 @@ and then login and run our tests.
         --name 'albert' \
         --volume "${tempdir}:/database.init/" \
         --volume "${tempcfg}:/database.config" \
-       'cosmopterix/derby'
+       'cosmopterix/hsqldb'
 
     #
     # Login and run our tests.
@@ -205,14 +205,14 @@ and then login and run our tests.
         --tty \
         --interactive \
         'albert' \
-        'derby-client'
+        'hsqldb-client'
 
             SELECT id, ra, decl FROM alpha_source ;
             SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
             SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
             SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
 
-            EXIT;
+            \q
 
 ```
 

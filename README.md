@@ -14,8 +14,8 @@ Working containers for :
 * [PostgreSQL](docker/pgsql)
 * [MySQL](docker/mysql)
 * [MariaDB](docker/mariadb)
-* [HyperSQL](docker/hsqldb)
 * [Apache Derby](docker/derby)
+* [HyperSQL](docker/hsqldb)
 * [Oracle](docker/oracle) (requires external download)
 
 Work in progress for :

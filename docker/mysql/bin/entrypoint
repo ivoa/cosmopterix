@@ -256,10 +256,10 @@ EOF
             for file in ${databaseinit}/*
             do
                 case "${file}" in
-                    *.sh)     echo "$0: running [${file}]"; source "${file}" ;;
-                    *.sql)    echo "$0: running [${file}]"; "${mysqlcmd[@]}" < "${file}" ;;
-                    *.sql.gz) echo "$0: running [${file}]"; gunzip --stdout "${file}" | "${mysqlcmd[@]}" ;;
-                    *)        echo "$0: ignoring [${file}]" ;;
+                    *.sh)     echo "Running [${file}]"; source "${file}" ;;
+                    *.sql)    echo "Running [${file}]"; "${mysqlcmd[@]}" < "${file}" ;;
+                    *.sql.gz) echo "Running [${file}]"; gunzip --stdout "${file}" | "${mysqlcmd[@]}" ;;
+                    *)        echo "Ignoring [${file}]" ;;
                 esac
             done
         fi
@@ -303,9 +303,10 @@ EOF
 
     echo ""
     echo "Starting database service"
-    exec gosu "${serveruser}" \
+    exec \
         mysqld_safe \
-            --datadir "${serverdata}"
+            --user="${serveruser}" \
+            --datadir="${serverdata}"
 
 #
 # User command.

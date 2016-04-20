@@ -33,6 +33,11 @@ ENV serverdata /var/lib/mysql
 VOLUME ${serverdata}
 
 #
+# Default logs path.
+#ENV serverlogs /var/log/mariadb
+#VOLUME ${serverlogs}
+
+#
 # Add our install scripts. 
 COPY bin /usr/local/bin/
 RUN chmod a+x /usr/local/bin/*

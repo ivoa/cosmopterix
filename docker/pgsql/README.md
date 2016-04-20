@@ -1,5 +1,5 @@
-This container is based on the [Fedora](../fedora/23) base container, using the OS package manager to install the
-[PostgreSQL](http://www.postgresql.org/) database server and client.
+This container is based on the Cosmopterix [Fedora](../fedora/23) base container, and uses the OS package manager to install
+version 9.4.7 of the [PostgreSQL](http://www.postgresql.org/) database server and client.
 
 Running the container with no arguments will create a new database, with random database name, user name and password.
 
@@ -24,19 +24,28 @@ The entrypoint script saves details of the database configuration in a `/databas
         'albert' \
         cat '/database.save'
 
-    #
-    # Admin settings
-    admindata=postgres
-    adminuser=postgres
-    adminpass=ahdues2Aad
+            #
+            # Admin settings
+            admindata=postgres
+            adminuser=postgres
+            adminpass=AM8looghuu
 
-    ....
-    
-    #
-    # Database settings
-    databasename=Kie5aeQuai
-    databaseuser=IevoB8om8o
-    databasepass=ighei0Ieyi
+            #
+            # System settings
+            serveruser=postgres
+            serverdata=/var/lib/pgsql
+            serverport=5432
+            serveripv4=0.0.0.0
+            serversock=/var/lib/pgsql/pgsql.sock
+            serverlocale=en_GB.UTF8
+            serverencoding=UTF8
+
+            #
+            # Database settings
+            databasename=queu8oBeiF
+            databaseuser=oohoch8Jae
+            databasepass=Pai6GaeN0a
+
 ```
 
 The entry point script checks for a `/database.config` script file
@@ -92,28 +101,28 @@ database name and user name will be `testdb` and `stephany`.
         'albert' \
         cat '/database.save'
 
-    #
-    # Admin settings
-    admindata=postgres
-    adminuser=helen
-    adminpass=aingo2aiY4
+            #
+            # Admin settings
+            admindata=postgres
+            adminuser=helen
+            adminpass=Yaiweik1Si
 
-    ....
+            ....
 
-    #
-    # Database settings
-    databasename=testdb
-    databaseuser=stephany
-    databasepass=ahTahbi3zo
+            #
+            # Database settings
+            databasename=testdb
+            databaseuser=stephany
+            databasepass=yoog2aiK8a
 
 ```
 
 The entry point script also checks for `.sh`, `.sql` or `.sql.gz` files
 in the `/database.init/` directory inside the container.
 
-* Shell script, `*.sh`, files will be executed inside the container using the database server login.
-* SQL, `*.sql`, files will be run on the new database using the `psql` command line client.
-* Gzipped, `*.sql.gz`, files will be unzipped and then run on the new database using the `psql` command line client.
+* Shell script, `*.sh`, files will be executed inside the container using the `source` command.
+* SQL, `*.sql`, files will be run on the new database using the command line client.
+* Gzipped, `*.sql.gz`, files will be unzipped and then run on the new database using the command line client.
 
 You can use the Docker `--volume` option to mount a local directory as `/database.init/` inside the container.
 
@@ -147,48 +156,46 @@ from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
         --follow \
         'albert'
 
-    ....
-    ....
-    Checking init directory [/database.init]
+            ....
+            Running init scripts
+            /usr/local/bin/entrypoint: running [/database.init/001.sql]
+            CREATE TABLE
 
-    Running init scripts
-    /usr/local/bin/entrypoint: running [/database.init/001.sql]
-    CREATE TABLE
-
-    /usr/local/bin/entrypoint: running [/database.init/002.sql]
-    INSERT 0 1
-    INSERT 0 1
-    INSERT 0 1
-    ....
+            /usr/local/bin/entrypoint: running [/database.init/002.sql]
+            INSERT 0 1
+            INSERT 0 1
+            ....
 
 ```
 
-The container image also includes a startup script for the the`psql` commandline client.
+The container image also includes a startup script for the the `psql` commandline client.
 
-Using the Docker `exec` command to run `psql-client` will launch the psql commandline client and automatically connects it to the new database.
+Using the Docker `exec` command to run `pgsql-client` will launch the `psql` commandline client and automatically connect it to the database.
 
 ```
     docker exec \
         --tty \
         --interactive \
         'albert' \
-        'psql-client'
+        'pgsql-client'
 
-        \dt
+            \l
+            \dt
 
-        \q
+            SELECT version();
+
+            \q
 
 ```
 
-Combining these fatures, we can create a new database,
-initialise it with data from our SQL scripts, and then
-login and run our tests.
+Using these tools we can create a new database, initialise it with data from our SQL scripts,
+and then login and run our tests.
 
 ```
     #
     # Create our scripts directory.
     tempdir=$(mktemp -d)
-    cp "mysql/sql/alpha-source.sql" "${tempdir}/001.sql"
+    cp "pgsql/sql/alpha-source.sql" "${tempdir}/001.sql"
     cp "data/alpha-source-data.sql" "${tempdir}/002.sql"
 
     #
@@ -201,14 +208,16 @@ login and run our tests.
        'cosmopterix/pgsql'
 
     #
-    # Login and run a test.
+    # Login and run our tests.
     docker exec \
         --tty \
         --interactive \
         'albert' \
-        'psql-client'
+        'pgsql-client'
 
             \pset pager off 
+
+            SELECT version();
             
             SELECT id, ra, decl FROM alpha_source ;
             SELECT id, ra, decl FROM alpha_source LIMIT 10 ;

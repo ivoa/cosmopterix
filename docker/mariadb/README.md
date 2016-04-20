@@ -1,5 +1,5 @@
-This container is based on the [Fedora](../fedora/23) base container, using the OS package manager to install the
-[MariaDB](https://mariadb.org/) database server and client.
+This container is based on the Cosmopterix [Fedora](../fedora/23) base container, and uses the OS package manager to install
+version 10.0.23 of the [MariaDB](https://mariadb.org/) database server and client.
 
 Running the container with no arguments will create a new database, with random database name, user name and password.
 
@@ -24,19 +24,26 @@ The entrypoint script saves details of the database configuration in a `/databas
         'albert' \
         cat '/database.save'
 
-    #
-    # Admin settings
-    admindata=mysql
-    adminuser=root
-    adminpass=lieng3gaeY
+            #
+            # Admin settings
+            admindata=mysql
+            adminuser=root
+            adminpass=thoh3Leizo
 
-    ....
-    
-    #
-    # Database settings
-    databasename=Oreeleif3i
-    databaseuser=Hiegh4ooyu
-    databasepass=Aht3Shisho
+            #
+            # System settings
+            serveruser=mysql
+            serverdata=/var/lib/mysql
+            serverport=3306
+            serveripv4=0.0.0.0
+            serversock=/var/lib/mysql/mysql.sock
+
+            #
+            # Database settings
+            databasename=aivae3Pose
+            databaseuser=Shuatha2be
+            databasepass=FaivaiFei8
+
 ```
 
 The entry point script checks for a `/database.config` script file
@@ -92,33 +99,32 @@ database name and user name will be `testdb` and `stephany`.
         'albert' \
         cat '/database.save'
 
-    #
-    # Admin settings
-    admindata=mysql
-    adminuser=helen
-    adminpass=aingo2aiY4
+            #
+            # Admin settings
+            admindata=mysql
+            adminuser=helen
+            adminpass=rae1Ahtio6
 
-    ....
+            ....
 
-    #
-    # Database settings
-    databasename=testdb
-    databaseuser=stephany
-    databasepass=ahTahbi3zo
+            #
+            # Database settings
+            databasename=testdb
+            databaseuser=stephany
+            databasepass=vei4Aith9o
 
 ```
 
 The entry point script also checks for `.sh`, `.sql` or `.sql.gz` files
 in the `/database.init/` directory inside the container.
 
-* Shell script, `*.sh`, files will be executed inside the container using the database server login.
-* SQL, `*.sql`, files will be run on the new database using the `mysql` command line client.
-* Gzipped, `*.sql.gz`, files will be unzipped and then run on the new database using the `mysql` command line client.
+* Shell script, `*.sh`, files will be executed inside the container using the `source` command.
+* SQL, `*.sql`, files will be run on the new database using the command line client.
+* Gzipped, `*.sql.gz`, files will be unzipped and then run on the new database using the command line client.
 
 You can use the Docker `--volume` option to mount a local directory as `/database.init/` inside the container.
 
 ```
-
     #
     # Create a temp directory.
     tempdir=$(mktemp -d)
@@ -147,56 +153,38 @@ from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
         --follow \
         'albert'
 
-    ....
-    ....
-    Running local instance
-    ....
-    Checking user database [eiGheeseM0]
-    Creating user database [eiGheeseM0]
-    Checking user account [vee0aseo5Z]
-    Creating user account [vee0aseo5Z]
-    Creating user access [vee0aseo5Z][eiGheeseM0]
-
-    Checking init directory [/database.init]
-
-    Running init scripts
-    /usr/local/bin/entrypoint: running [/database.init/001.sql]
-    /usr/local/bin/entrypoint: running [/database.init/002.sql]
-    ....
+            ....
+            Running init scripts
+            Running [/database.init/001.sql]
+            
+            Running [/database.init/002.sql]
 
 ```
 
-The container image also includes a startup script for the the`mysql` commandline client.
+The container image also includes a startup script for the the `mysql` commandline client.
 
-Using the Docker `exec` command to run `mysql-client` will launch the mysql commandline client and automatically connects it to the new database.
+Using the Docker `exec` command to run `mysql-client` will launch the `mysql`  commandline client and automatically connect it to the database.
 
 ```
     docker exec \
         --tty \
         --interactive \
         'albert' \
-        'msql-client'
+        'mysql-client'
 
-        SHOW DATABASES ;
+            SHOW DATABASES ;
+            SHOW TABLES ;
 
-        \q
-
-```
-
-Combining these fatures, we can create a new database,
-initialise it with data from our SQL scripts, and then
-login and run our tests.
+            SELECT version();
+            
+            \q
 
 ```
-    #
-    # Create our config file.
-    tempcfg=$(mktemp)
-    cat > "${tempcfg:?}" << EOF
-databasename=testdb
-databaseuser=stephany
-databasepass=$(pwgen 10 1)
-EOF
 
+Using these tools we can create a new database, initialise it with data from our SQL scripts,
+and then login and run our tests.
+
+```
     #
     # Create our scripts directory.
     tempdir=$(mktemp -d)
@@ -213,12 +201,14 @@ EOF
        'cosmopterix/mariadb'
 
     #
-    # Login and run a test.
+    # Login and run our tests.
     docker exec \
         --tty \
         --interactive \
         'albert' \
         'mysql-client'
+
+            SELECT version();
 
             SELECT id, ra, decl FROM alpha_source ;
             SELECT id, ra, decl FROM alpha_source LIMIT 10 ;

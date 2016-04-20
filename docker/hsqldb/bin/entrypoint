@@ -74,12 +74,6 @@ fi
 # Saved configuration.
 cat > "${databasesave}" << EOF
 #
-# Admin settings
-admindata=${admindata}
-adminuser=${adminuser}
-adminpass=${adminpass}
-
-#
 # System settings
 serveruser=${serveruser}
 serverdata=${serverdata}
