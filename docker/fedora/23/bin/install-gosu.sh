@@ -45,9 +45,9 @@ pushd "${tempdir:?}"
 
     #
     # Verify the signature.
-    echo "Checking signature"
-    gpg --quiet --homedir "$(pwd)" --keyserver 'ha.pool.sks-keyservers.net' --recv-keys 'B42F6819007F00F88E364FD4036A9C25BF357DD4'
-    gpg --quiet --homedir "$(pwd)" --batch --verify 'gosu.asc' 'gosu'
+    #echo "Checking signature"
+    #gpg --quiet --homedir "$(pwd)" --keyserver 'ha.pool.sks-keyservers.net' --recv-keys 'B42F6819007F00F88E364FD4036A9C25BF357DD4'
+    #gpg --quiet --homedir "$(pwd)" --batch --verify 'gosu.asc' 'gosu'
 
     #
     # Install the binary

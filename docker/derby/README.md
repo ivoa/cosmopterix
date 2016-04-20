@@ -1,5 +1,5 @@
-This container is based on the [Fedora](../fedora/23) base container, using the OS package manager to install the
-[PostgreSQL](http://www.postgresql.org/) database server and client.
+This container is based on the [Fedora/Java](../java/8) base container.
+The container build script downloads and installs version 10.12.1.1 of the [Apache Derby](https://db.apache.org/derby/) database .
 
 Running the container with no arguments will create a new database, with random database name, user name and password.
 
@@ -9,7 +9,7 @@ Running the container with no arguments will create a new database, with random 
     docker run \
         --detach \
         --name 'albert' \
-       'cosmopterix/pgsql'
+       'cosmopterix/derby'
 
 ```
 
@@ -149,6 +149,15 @@ from the `alpha-source.sql` and `alpha-source-data.sql` SQL files.
 
     ....
     ....
+    Running local instance
+    ....
+    Checking database user [sei5aijeiL]
+    Creating database user [sei5aijeiL]
+    CREATE ROLE
+    Checking database data [Li4dih1lei]
+    Creating database data [Li4dih1lei]
+    CREATE DATABASE
+
     Checking init directory [/database.init]
 
     Running init scripts
@@ -180,11 +189,21 @@ Using the Docker `exec` command to run `psql-client` will launch the psql comman
 
 ```
 
-Combining these fatures, we can create a new database,
-initialise it with data from our SQL scripts, and then
-login and run our tests.
+Combining all of the above, we can create a database with
+specific username and passwords, initialise the database with
+data from our SQL scripts, and then login
+and run our tests.
 
 ```
+    #
+    # Create our config file.
+    tempcfg=$(mktemp)
+    cat > "${tempcfg:?}" << EOF
+databasename=testdb
+databaseuser=stephany
+databasepass=$(pwgen 10 1)
+EOF
+
     #
     # Create our scripts directory.
     tempdir=$(mktemp -d)
@@ -192,12 +211,13 @@ login and run our tests.
     cp "data/alpha-source-data.sql" "${tempdir}/002.sql"
 
     #
-    # Run our database container with ${tempdir} mounted
-    # as /database.init/ inside the container
+    # Run our database container with ${tempcfg} mounted
+    # as /database.config inside the container
     docker run \
         --detach \
         --name 'albert' \
         --volume "${tempdir}:/database.init/" \
+        --volume "${tempcfg}:/database.config" \
        'cosmopterix/pgsql'
 
     #

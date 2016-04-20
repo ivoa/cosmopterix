@@ -1,6 +1,5 @@
-This container is based on the [Fedora](../fedora/23) base container.
-
-The Docker file uses the distribution package manager to install the [MySQL](https://www.mysql.com/) database server and client.
+This container is based on the [Fedora](../fedora/23) base container, using the OS package manager to install the
+[MySQL](https://www.mysql.com/) database server and client.
 
 Running the container with no arguments will create a new database, with random database name, user name and password.
 
@@ -14,7 +13,7 @@ Running the container with no arguments will create a new database, with random 
 
 ```
 
-The entrypoint script saves deatils of the database configuration in a `/database.save` file inside the container.
+The entrypoint script saves details of the database configuration in a `/database.save` file inside the container.
 
 ```
     #
@@ -184,10 +183,9 @@ Using the Docker `exec` command to run `mysql-client` will launch the mysql comm
 
 ```
 
-Combining all of the above, we can create a database with
-specific username and passwords, initialise the database with
-data from our SQL scripts, and then login
-and run our tests.
+Combining these fatures, we can create a new database,
+initialise it with data from our SQL scripts, and then
+login and run our tests.
 
 ```
     #
@@ -212,7 +210,6 @@ EOF
         --detach \
         --name 'albert' \
         --volume "${tempdir}:/database.init/" \
-        --volume "${tempcfg}:/database.config" \
        'cosmopterix/mysql'
 
     #

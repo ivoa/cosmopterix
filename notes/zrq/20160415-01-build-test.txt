@@ -30,6 +30,14 @@ COSMOPTERIX_CODE=${COSMOPTERIX_HOME:?}/github
 EOF
 
 # -----------------------------------------------------
+# Remove existing containers and images.
+#[user@desktop]
+
+    docker rm -v $(docker stop $(docker ps -aq))
+
+    docker rmi -f $(docker images -q)
+
+# -----------------------------------------------------
 # Build our container images.
 #[user@desktop]
 
@@ -40,58 +48,41 @@ EOF
 
             docker build \
                 --tag "cosmopterix/fedora:23-1.0" \
+                --tag "cosmopterix/fedora:latest" \
                 fedora/23
 
             docker build \
                 --tag "cosmopterix/java:8-1.0" \
+                --tag "cosmopterix/java:latest" \
                 java/8
 
             docker build \
                 --tag "cosmopterix/pgsql:9.4-1.0" \
+                --tag "cosmopterix/pgsql:latest" \
                 pgsql
 
             docker build \
                 --tag "cosmopterix/mysql:5.6-1.0" \
+                --tag "cosmopterix/mysql:latest" \
                 mysql
 
             docker build \
                 --tag "cosmopterix/mariadb:10.0-1.0" \
+                --tag "cosmopterix/mariadb:latest" \
                 mariadb
 
             docker build \
                 --tag "cosmopterix/derby:10.12-1.0" \
+                --tag "cosmopterix/derby:latest" \
                 derby
 
             docker build \
                 --tag "cosmopterix/hsqldb:2.3-1.0" \
+                --tag "cosmopterix/hsqldb:latest" \
                 hsqldb
 
         popd
     popd
-
-# -----------------------------------------------------
-# Tag our latest images.
-#[user@desktop]
-
-    docker tag \
-        "cosmopterix/pgsql:9.4-1.0" \
-        "cosmopterix/pgsql:latest"
-
-    docker tag \
-        "cosmopterix/mysql:5.6-1.0" \
-        "cosmopterix/mysql:latest"
-
-    docker tag \
-        "cosmopterix/mariadb:10.0-1.0" \
-        "cosmopterix/mariadb:latest"
-
-    docker tag \
-        "cosmopterix/derby:10.12-1.0" \
-        "cosmopterix/derby:latest"
-
-    docker tag \
-        "cosmopterix/hsqldb:2.3-1.0" \
-        "cosmopterix/hsqldb:latest"
 
 # -----------------------------------------------------
 # Push our container images.
@@ -105,38 +96,24 @@ EOF
         Login Succeeded
 
     docker push "cosmopterix/fedora:23-1.0"
+    docker push "cosmopterix/fedora:latest"
 
     docker push "cosmopterix/java:8-1.0"
+    docker push "cosmopterix/java:latest"
 
     docker push "cosmopterix/pgsql:9.4-1.0"
-
-    docker push "cosmopterix/mysql:5.6-1.0"
-
-    docker push "cosmopterix/mariadb:10.0-1.0"
-
-    docker push "cosmopterix/derby:10.12-1.0"
-
-    docker push "cosmopterix/hsqldb:2.3-1.0"
-
-# -----------------------------------------------------
-# Push our latest images.
-#[user@desktop]
-
-    docker login
-
-        Username: xxxx
-        Password: yyyy
-        Email:    zzzz
-        Login Succeeded
-
     docker push "cosmopterix/pgsql:latest"
 
+    docker push "cosmopterix/mysql:5.6-1.0"
     docker push "cosmopterix/mysql:latest"
 
+    docker push "cosmopterix/mariadb:10.0-1.0"
     docker push "cosmopterix/mariadb:latest"
 
+    docker push "cosmopterix/derby:10.12-1.0"
     docker push "cosmopterix/derby:latest"
 
+    docker push "cosmopterix/hsqldb:2.3-1.0"
     docker push "cosmopterix/hsqldb:latest"
 
 # -------------------------------------------------------------------------------------------
@@ -144,7 +121,7 @@ EOF
 #[user@desktop]
 
     source "${HOME:?}/cosmopterix.settings"
-    pushd "${COSMOPTERIX_HOME:?}"
+    pushd "${COSMOPTERIX_CODE:?}"
 
         pushd docker
         
@@ -160,9 +137,13 @@ EOF
 
             docker logs --follow 'albert'
 
-            docker exec -it \
+            docker exec
+                --tty \
+                --interactive \
                 'albert' \
                 psql-client
+
+                \pset pager off
 
                 SELECT id, ra, decl FROM alpha_source ;
                 SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
@@ -186,11 +167,17 @@ EOF
     popd
 
 # -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
+
+# -------------------------------------------------------------------------------------------
 # Test our MySQL container.
 #[user@desktop]
 
     source "${HOME:?}/cosmopterix.settings"
-    pushd "${COSMOPTERIX_HOME:?}"
+    pushd "${COSMOPTERIX_CODE:?}"
 
         pushd docker
         
@@ -198,17 +185,19 @@ EOF
             cp "mysql/sql/alpha-source.sql" "${datadir}/001.sql"
             cp "data/alpha-source-data.sql" "${datadir}/002.sql"
 
-            docker run --detach \
-                --name mysql \
+            docker run \
+                --detach \
+                --name 'albert' \
                 --volume "${datadir}:/database.init/" \
                 "cosmopterix/mysql:5.6-1.0"
 
-            docker logs -f mysql
+            docker logs --follow 'albert'
 
-            docker exec -it \
-                mysql \
-                entrypoint.sh \
-                mysql
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                mysql-client
 
                 -- MySQL :
                 --  [ORDER BY <sort_column>] is separate
@@ -241,13 +230,19 @@ EOF
             \q
         popd
     popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
         
 # -------------------------------------------------------------------------------------------
 # Test our MariaDB container.
 #[user@desktop]
 
     source "${HOME:?}/cosmopterix.settings"
-    pushd "${COSMOPTERIX_HOME:?}"
+    pushd "${COSMOPTERIX_CODE:?}"
 
         pushd docker
         
@@ -255,17 +250,19 @@ EOF
             cp "mariadb/sql/alpha-source.sql" "${datadir}/001.sql"
             cp "data/alpha-source-data.sql"   "${datadir}/002.sql"
 
-            docker run --detach \
-                --name mariadb \
+            docker run \
+                --detach \
+                --name 'albert' \
                 --volume "${datadir}:/database.init/" \
                 "cosmopterix/mariadb:10.0-1.0"
 
-            docker logs -f mariadb
+            docker logs -f 'albert'
 
-            docker exec -it \
-                mariadb \
-                entrypoint.sh \
-                mysql
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                mysql-client
 
                 -- MariaDB :
                 --  [ORDER BY <sort_column>] is separate
@@ -300,11 +297,17 @@ EOF
     popd
 
 # -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
+
+# -------------------------------------------------------------------------------------------
 # Test our Derby container.
 #[user@desktop]
 
     source "${HOME:?}/cosmopterix.settings"
-    pushd "${COSMOPTERIX_HOME:?}"
+    pushd "${COSMOPTERIX_CODE:?}"
 
         pushd docker
         
@@ -351,7 +354,7 @@ EOF
 #[user@desktop]
 
     source "${HOME:?}/cosmopterix.settings"
-    pushd "${COSMOPTERIX_HOME:?}"
+    pushd "${COSMOPTERIX_CODE:?}"
 
         pushd docker
         
