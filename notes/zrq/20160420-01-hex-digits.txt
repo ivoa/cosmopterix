@@ -1,0 +1,303 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -------------------------------------------------------------------------------------------
+# Test our PostgreSQL container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "pgsql/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name 'albert' \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/pgsql:9.4-1.0"
+
+            docker logs --follow 'albert'
+
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                pgsql-client
+
+                    \pset pager off
+
+                    #
+                    # Hex literal
+                    SELECT x'FF'::int ;
+
+                    #
+                    # Bit NOT
+                    SELECT ~ x'FF'::int ;
+
+                    #
+                    # Bit AND
+                    SELECT x'FF'::int & x'AA'::int ;
+
+                    #
+                    # Bit XOR
+                    SELECT x'FF'::int # x'AA'::int ;
+
+                \q
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
+
+# -------------------------------------------------------------------------------------------
+# Test our MySQL container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "mysql/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name 'albert' \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/mysql:5.6-1.0"
+
+            docker logs --follow 'albert'
+
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                mysql-client
+
+                    #
+                    # String literal
+                    SELECT x'41' ;
+                    SELECT X'41' ;
+                    SELECT 0x41  ;
+
+                    #
+                    # Hex literal
+                    SELECT x'41' + 1 ;
+                    SELECT X'41' + 1 ;
+                    SELECT 0x41  + 1 ;
+
+                    #
+                    # CAST literal
+                    SELECT CAST(x'41' AS UNSIGNED) ;
+                    SELECT CAST(X'41' AS UNSIGNED) ;
+                    SELECT CAST(0x41  AS UNSIGNED) ;
+
+                    #
+                    # Bit NOT
+                    SELECT ~ x'01' ;
+
+                    #
+                    # Bit AND
+                    SELECT x'FF' & x'AA' ;
+
+                    #
+                    # Bit XOR
+                    SELECT x'FF' ^ x'AA' ;
+
+
+                \q
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
+        
+# -------------------------------------------------------------------------------------------
+# Test our MariaDB container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "mariadb/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql"   "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name 'albert' \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/mariadb:10.0-1.0"
+
+            docker logs -f 'albert'
+
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                mysql-client
+
+                    #
+                    # String literal
+                    SELECT x'41' ;
+                    SELECT X'41' ;
+                    SELECT 0x41  ;
+
+                    #
+                    # Hex literal
+                    -- SELECT x'41' + 0 ;
+                    -- SELECT X'41' + 0 ;
+                    SELECT 0x41  + 0 ;
+
+                    #
+                    # CAST literal
+                    -- SELECT CAST(x'41' AS UNSIGNED) ;
+                    -- SELECT CAST(X'41' AS UNSIGNED) ;
+                    SELECT CAST(0x41  AS UNSIGNED) ;
+
+                    #
+                    # Bit NOT
+                    SELECT ~ (x'01' + 0) ;
+
+                    #
+                    # Bit AND
+                    SELECT (x'FF' + 0) & (x'AA' + 0) ;
+
+                    SELECT (x'01' + 0) & (x'01' + 0) ;
+
+mess :-(
+
+                    #
+                    # Bit XOR
+                    SELECT x'FF' ^ x'AA' ;
+
+            \q
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
+
+# -------------------------------------------------------------------------------------------
+# Test our Derby container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "derby/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name 'albert' \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/derby:10.12-1.0"
+
+            docker logs -f 'albert'
+
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                derby-client
+    
+....
+....
+
+
+            quit;
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
+
+# -------------------------------------------------------------------------------------------
+# Test our HyperSQL container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "hsqldb/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name 'albert' \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/hsqldb:2.3-1.0"
+
+            docker logs -f 'albert'
+
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                hsqldb-client
+
+....
+....
+
+
+            \q
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
+

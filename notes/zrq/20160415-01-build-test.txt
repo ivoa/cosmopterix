@@ -137,11 +137,11 @@ EOF
 
             docker logs --follow 'albert'
 
-            docker exec
+            docker exec \
                 --tty \
                 --interactive \
                 'albert' \
-                psql-client
+                pgsql-client
 
                 \pset pager off
 
