@@ -163,6 +163,7 @@ EOF
                 --  [OFFSET row_offset] is separate
 
             \q
+
         popd
     popd
 
@@ -228,6 +229,7 @@ EOF
                 -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT -1 OFFSET 10 ;
 
             \q
+
         popd
     popd
 
@@ -293,6 +295,7 @@ EOF
                 -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT -1 OFFSET 10 ;
 
             \q
+
         popd
     popd
 
@@ -315,17 +318,20 @@ EOF
             cp "derby/sql/alpha-source.sql" "${datadir}/001.sql"
             cp "data/alpha-source-data.sql" "${datadir}/002.sql"
 
-            docker run --detach \
-                --name derby \
+            docker run \
+                --detach \
+                --name 'albert' \
                 --volume "${datadir}:/database.init/" \
                 "cosmopterix/derby:10.12-1.0"
 
-            docker logs -f derby
+            docker logs -f 'albert'
+
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                derby-client
     
-            docker exec -it \
-                derby \
-                entrypoint.sh \
-                ij
 
                 -- Derby :
                 --  [ORDER BY sort_column] is separate
@@ -346,8 +352,15 @@ EOF
                 SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ROWS FETCH FIRST 10 ROWS ONLY ;
 
             quit;
+
         popd
     popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
 
 # -------------------------------------------------------------------------------------------
 # Test our HyperSQL container.
@@ -362,17 +375,19 @@ EOF
             cp "hsqldb/sql/alpha-source.sql" "${datadir}/001.sql"
             cp "data/alpha-source-data.sql" "${datadir}/002.sql"
 
-            docker run --detach \
-                --name hsqldb \
+            docker run \
+                --detach \
+                --name 'albert' \
                 --volume "${datadir}:/database.init/" \
                 "cosmopterix/hsqldb:2.3-1.0"
 
-            docker logs -f hsqldb
-    
-            docker exec -it \
-                hsqldb \
-                entrypoint.sh \
-                sqltool
+            docker logs -f 'albert'
+
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                hsqldb-client
 
                 -- HSQLDB :
                 --  [ORDER BY <sort_column>] is separate
@@ -395,7 +410,13 @@ EOF
                 SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 LIMIT 10 ;
 
             \q
+
         popd
     popd
 
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
 

@@ -1,3 +1,4 @@
+#!/bin/sh
 #
 # Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
 # All rights reserved.
@@ -14,42 +15,37 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-FROM cosmopterix/java:8-1.0
-MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
+#
 
 #
-# HSQLDB version
-ENV hsqldbversion=2.3.3
+# Strict error checking.
+# http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
+IFS=$'\n\t'
 
 #
-# Default port number.
-ENV serverport 9001
-EXPOSE ${serverport}
+# User configuration.
+: ${databaseconfig:=/database.config}
+if [ -e "${databaseconfig}" ]
+then
+    source "${databaseconfig}"
+fi
 
 #
-# Default code path.
-ENV servercode /usr/lib/hsqldb
+# Saved configuration.
+: ${databasesave:=/database.save}
+if [ -e "${databasesave}" ]
+then
+    source "${databasesave}"
+fi
 
 #
-# Default data path.
-ENV serverdata /var/lib/hsqldb
-VOLUME ${serverdata}
-
-#
-# Add our install scripts. 
-COPY bin /usr/local/bin/
-RUN chmod a+x /usr/local/bin/*
-
-#
-# Run our install scripts.
-RUN /usr/local/bin/install-hsqldb
-
-#
-# Install our entry point script.
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
-
-#
-# Set the default command.
-CMD ["start"]
+# Run the database client.
+echo ""
+echo "Running SQLTool client"
+java \
+    -classpath ${hsqldblib} \
+    -jar ${hsqldblib}/sqltool.jar \
+    ${databasename} \
+    $@
 

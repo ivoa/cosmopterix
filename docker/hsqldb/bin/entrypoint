@@ -210,26 +210,11 @@ EOF
 
     echo ""
     echo "Starting database service"
-    gosu "${serveruser}" \
+    exec gosu "${serveruser}" \
         java \
         -classpath ${hsqldblib}/hsqldb.jar \
         org.hsqldb.server.Server \
         --props ${serverdata}/server.properties\
-
-#
-# SQLTool client.
-elif [ "${1}" = 'sqltool' ]
-then
-
-    shift
-
-    echo ""
-    echo "Running SQLTool client"
-    java \
-        -classpath ${hsqldblib} \
-        -jar ${hsqldblib}/sqltool.jar \
-        ${databasename} \
-        $@
 
 #
 # User command.

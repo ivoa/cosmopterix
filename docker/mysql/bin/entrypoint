@@ -256,7 +256,7 @@ EOF
             for file in ${databaseinit}/*
             do
                 case "${file}" in
-                    *.sh)     echo "$0: running [${file}]"; gosu "${serveruser}" source "${file}" ;;
+                    *.sh)     echo "$0: running [${file}]"; source "${file}" ;;
                     *.sql)    echo "$0: running [${file}]"; "${mysqlcmd[@]}" < "${file}" ;;
                     *.sql.gz) echo "$0: running [${file}]"; gunzip --stdout "${file}" | "${mysqlcmd[@]}" ;;
                     *)        echo "$0: ignoring [${file}]" ;;
