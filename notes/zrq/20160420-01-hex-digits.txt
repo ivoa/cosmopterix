@@ -21,6 +21,17 @@
 #
 
 # -------------------------------------------------------------------------------------------
+# Create our 'waitlog' function.
+#[user@desktop]
+
+waitlog()
+    {
+    local name=${1:?Name required}
+    local text=${2:?Text required}
+    sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
+    }
+
+# -------------------------------------------------------------------------------------------
 # Test our PostgreSQL container.
 #[user@desktop]
 
@@ -39,7 +50,7 @@
                 --volume "${datadir}:/database.init/" \
                 "cosmopterix/pgsql:9.4-1.0"
 
-            docker logs --follow 'albert'
+            waitlog 'albert' '^Init'
 
             docker exec \
                 --tty \
@@ -49,21 +60,50 @@
 
                     \pset pager off
 
-                    #
-                    # Hex literal
-                    SELECT x'FF'::int ;
+                    --
+                    -- Numeric literal - FAILS
+                    -- Interpreted as the numeric literal zero,
+                    -- in a columns named xFF, x41 and xAA.
+                    -- SELECT 0xFF ; -- 0
+                    -- SELECT 0x41 ; -- 0
+                    -- SELECT 0xAA ; -- 0
 
-                    #
-                    # Bit NOT
-                    SELECT ~ x'FF'::int ;
+                    --
+                    -- String literal plus - FAILS
+                    -- Type missmatch between string and int.
+                    -- SELECT x'FF' + 0 ;
+                    -- SELECT x'41' + 0 ;
+                    -- SELECT x'AA' + 0 ;
 
-                    #
-                    # Bit AND
-                    SELECT x'FF'::int & x'AA'::int ;
+                    --
+                    -- Explicit type cast to int - works
+                    SELECT x'FF'::int ; -- 255
+                    SELECT x'41'::int ; --  65
+                    SELECT x'AA'::int ; -- 170
 
-                    #
-                    # Bit XOR
-                    SELECT x'FF'::int # x'AA'::int ;
+                    --
+                    -- Bit NOT - works (signed int)
+                    SELECT ~ x'FF'::int ; -- -256
+                    SELECT ~ x'41'::int ; --  -66
+                    SELECT ~ x'AA'::int ; -- -171
+
+                    --
+                    -- Bit AND - works
+                    SELECT x'FF'::int & x'AA'::int ; -- 170
+                    SELECT x'41'::int & x'AA'::int ; --  0
+                    SELECT x'AA'::int & x'AA'::int ; -- 170
+
+                    --
+                    -- Bit XOR - works
+                    SELECT x'FF'::int # x'AA'::int ; --  85
+                    SELECT x'41'::int # x'AA'::int ; -- 235
+                    SELECT x'AA'::int # x'AA'::int ; --   0
+
+                    --
+                    -- Sampling based on id.
+                    SELECT id FROM alpha_source WHERE (id & x'0F'::int) = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & x'07'::int) = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & x'03'::int) = 0  ;
 
                 \q
 
@@ -95,7 +135,7 @@
                 --volume "${datadir}:/database.init/" \
                 "cosmopterix/mysql:5.6-1.0"
 
-            docker logs --follow 'albert'
+            waitlog 'albert' '^Init'
 
             docker exec \
                 --tty \
@@ -103,36 +143,122 @@
                 'albert' \
                 mysql-client
 
-                    #
-                    # String literal
-                    SELECT x'41' ;
-                    SELECT X'41' ;
-                    SELECT 0x41  ;
+                    select version();
+                    -- 5.6.29
 
-                    #
-                    # Hex literal
-                    SELECT x'41' + 1 ;
-                    SELECT X'41' + 1 ;
-                    SELECT 0x41  + 1 ;
+                    --
+                    -- String literal - FAIL
+                    -- This is interpreted as the character literal,
+                    -- in a columns named x'FF', x'41' and x'AA'.
+                    SELECT x'FF' ; -- �
+                    SELECT X'41' ; -- A
+                    SELECT x'AA' ; -- �
 
-                    #
-                    # CAST literal
-                    SELECT CAST(x'41' AS UNSIGNED) ;
-                    SELECT CAST(X'41' AS UNSIGNED) ;
-                    SELECT CAST(0x41  AS UNSIGNED) ;
+                    --
+                    -- Numeric literal - FAILS
+                    -- Interpreted as the char value in
+                    -- columns named 0xFF, 0x41 and 0xAA.
+                    SELECT 0xFF  ; -- �
+                    SELECT 0x41  ; -- A
+                    SELECT 0xAA  ; -- �
 
-                    #
-                    # Bit NOT
-                    SELECT ~ x'01' ;
+                    --
+                    -- Upper case 'X' rejected - FAILS
+                    -- SELECT 0XFF  ;
+                    -- SELECT 0X41  ;
+                    -- SELECT 0XAA  ;
 
-                    #
-                    # Bit AND
-                    SELECT x'FF' & x'AA' ;
+                    --
+                    -- String literal plus - works
+                    SELECT x'FF' + 0 ; -- 255
+                    SELECT X'41' + 0 ; --  65
+                    SELECT X'AA' + 0 ; -- 170
 
-                    #
-                    # Bit XOR
-                    SELECT x'FF' ^ x'AA' ;
+                    --
+                    -- Numeric literal plus - works
+                    SELECT 0xFF  + 0 ; -- 255
+                    SELECT 0x41  + 0 ; --  65
+                    SELECT 0xAA  + 0 ; -- 170
 
+                    --
+                    -- CAST string literal - works
+                    SELECT CAST(x'FF' AS SIGNED) ; -- 255
+                    SELECT CAST(X'41' AS SIGNED) ; --  65
+                    SELECT CAST(x'AA' AS SIGNED) ; -- 170
+
+                    --
+                    -- CAST string literal - works
+                    SELECT CAST(x'FF' AS UNSIGNED) ; -- 255
+                    SELECT CAST(X'41' AS UNSIGNED) ; --  65
+                    SELECT CAST(x'AA' AS UNSIGNED) ; -- 170
+
+                    --
+                    -- CAST string literal - FAILS
+                    -- Different MySQL:MariaDB
+                    -- SELECT CAST(x'FF' AS INTEGER) ; -- 255
+                    -- SELECT CAST(X'41' AS INTEGER) ; --  65
+                    -- SELECT CAST(x'AA' AS INTEGER) ; -- 170
+
+                    --
+                    -- CAST numeric literal - works
+                    SELECT CAST(0xFF AS SIGNED) ; -- 255
+                    SELECT CAST(0x41 AS SIGNED) ; --  65
+                    SELECT CAST(0xAA AS SIGNED) ; -- 170
+
+                    --
+                    -- CAST numeric literal - works
+                    SELECT CAST(0xFF AS UNSIGNED) ; -- 255
+                    SELECT CAST(0x41 AS UNSIGNED) ; --  65
+                    SELECT CAST(0xAA AS UNSIGNED) ; -- 170
+
+                    --
+                    -- CAST numeric literal - fails
+                    -- Different MySQL:MariaDB
+                    -- SELECT CAST(0xFF AS INTEGER) ;
+                    -- SELECT CAST(0x41 AS INTEGER) ;
+                    -- SELECT CAST(0xAA AS INTEGER) ;
+
+                    --
+                    -- Bit NOT (64bit unsigned)
+                    SELECT ~ x'FF' ; -- 18446744073709551360
+                    SELECT ~ x'41' ; -- 18446744073709551550
+                    SELECT ~ x'AA' ; -- 18446744073709551445
+
+                    SELECT ~ 0xFF ; -- 18446744073709551360
+                    SELECT ~ 0x41 ; -- 18446744073709551550
+                    SELECT ~ 0xAA ; -- 18446744073709551445
+
+                    --
+                    -- Bit AND
+                    SELECT x'FF' & x'AA' ; -- 170
+                    SELECT x'41' & x'AA' ; --   0
+                    SELECT x'AA' & x'AA' ; -- 170
+
+                    SELECT 0xFF & 0xAA ; -- 170
+                    SELECT 0x41 & 0xAA ; --   0
+                    SELECT 0xAA & 0xAA ; -- 170
+
+                    --
+                    -- Bit XOR
+                    SELECT x'FF' ^ x'AA' ; --  85
+                    SELECT x'41' ^ x'AA' ; -- 235
+                    SELECT x'AA' ^ x'AA' ; --   0
+
+                    SELECT 0xFF ^ 0xAA ; --  85
+                    SELECT 0x41 ^ 0xAA ; -- 235
+                    SELECT 0xAA ^ 0xAA ; --   0
+
+                    --
+                    -- Sampling based on id - works
+                    SELECT id FROM alpha_source WHERE (id & x'0F') = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & x'07') = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & x'03') = 0  ;
+
+                    --
+                    -- Sampling based on id - works
+                    SELECT id FROM alpha_source WHERE (id & 0x0F) = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & 0x07) = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & 0x03) = 0  ;
 
                 \q
 
@@ -164,7 +290,7 @@
                 --volume "${datadir}:/database.init/" \
                 "cosmopterix/mariadb:10.0-1.0"
 
-            docker logs -f 'albert'
+            waitlog 'albert' '^Init'
 
             docker exec \
                 --tty \
@@ -172,39 +298,142 @@
                 'albert' \
                 mysql-client
 
-                    #
-                    # String literal
-                    SELECT x'41' ;
-                    SELECT X'41' ;
-                    SELECT 0x41  ;
+                    select version();
+                    -- 10.0.23-MariaDB
 
-                    #
-                    # Hex literal
-                    -- SELECT x'41' + 0 ;
-                    -- SELECT X'41' + 0 ;
-                    SELECT 0x41  + 0 ;
+                    --
+                    -- String literal - FAIL
+                    -- This is interpreted as the character literal,
+                    -- in a columns named x'FF', x'41' and x'AA'.
+                    SELECT x'FF' ; -- �
+                    SELECT X'41' ; -- A
+                    SELECT x'AA' ; -- �
 
-                    #
-                    # CAST literal
-                    -- SELECT CAST(x'41' AS UNSIGNED) ;
-                    -- SELECT CAST(X'41' AS UNSIGNED) ;
-                    SELECT CAST(0x41  AS UNSIGNED) ;
+                    --
+                    -- Numeric literal - FAILS
+                    -- Interpreted as the char value in
+                    -- columns named 0xFF, 0x41 and 0xAA.
+                    SELECT 0xFF  ; -- �
+                    SELECT 0x41  ; -- A
+                    SELECT 0xAA  ; -- �
 
-                    #
-                    # Bit NOT
-                    SELECT ~ (x'01' + 0) ;
+                    --
+                    -- Upper case 'X' rejected - FAILS
+                    -- SELECT 0XFF  ;
+                    -- SELECT 0X41  ;
+                    -- SELECT 0XAA  ;
 
-                    #
-                    # Bit AND
-                    SELECT (x'FF' + 0) & (x'AA' + 0) ;
+                    --
+                    -- String literal plus - FAILS
+                    -- Different MySQL:MariaDB
+                    SELECT x'FF' + 0 ; -- 0
+                    SELECT X'41' + 0 ; -- 0
+                    SELECT X'AA' + 0 ; -- 0
+                    -- 1 row in set, 1 warning (0.00 sec)
 
-                    SELECT (x'01' + 0) & (x'01' + 0) ;
+                    --
+                    -- Numeric literal plus - works
+                    SELECT 0xFF  + 0 ; -- 255
+                    SELECT 0x41  + 0 ; --  65
+                    SELECT 0xAA  + 0 ; -- 170
 
-mess :-(
+                    -- CAST string literal - FAILS
+                    -- Different MySQL:MariaDB
+                    SELECT CAST(x'FF' AS INTEGER) ; -- 0
+                    SELECT CAST(X'41' AS INTEGER) ; -- 0
+                    SELECT CAST(x'AA' AS INTEGER) ; -- 0
+                    -- 1 row in set, 1 warning (0.00 sec)
 
-                    #
-                    # Bit XOR
-                    SELECT x'FF' ^ x'AA' ;
+                    --
+                    -- CAST string literal - FAILS
+                    -- Different MySQL:MariaDB
+                    SELECT CAST(x'FF' AS SIGNED) ; -- 0
+                    SELECT CAST(X'41' AS SIGNED) ; -- 0
+                    SELECT CAST(x'AA' AS SIGNED) ; -- 0
+                    -- 1 row in set, 1 warning (0.00 sec)
+
+                    --
+                    -- CAST string literal - FAILS
+                    -- Different MySQL:MariaDB
+                    SELECT CAST(x'FF' AS UNSIGNED) ; -- 0
+                    SELECT CAST(X'41' AS UNSIGNED) ; -- 0
+                    SELECT CAST(x'AA' AS UNSIGNED) ; -- 0
+                    -- 1 row in set, 1 warning (0.00 sec)
+
+                    --
+                    -- CAST numeric literal - works
+                    SELECT CAST(0xFF AS SIGNED) ; -- 255
+                    SELECT CAST(0x41 AS SIGNED) ; --  65
+                    SELECT CAST(0xAA AS SIGNED) ; -- 170
+
+                    --
+                    -- CAST numeric literal - works
+                    SELECT CAST(0xFF AS UNSIGNED) ; -- 255
+                    SELECT CAST(0x41 AS UNSIGNED) ; --  65
+                    SELECT CAST(0xAA AS UNSIGNED) ; -- 170
+
+                    --
+                    -- CAST numeric literal - works
+                    -- Different MySQL:MariaDB
+                    SELECT CAST(0xFF AS INTEGER) ; -- 255
+                    SELECT CAST(0x41 AS INTEGER) ; --  65
+                    SELECT CAST(0xAA AS INTEGER) ; -- 170
+
+                    --
+                    -- Bit NOT - FAILS
+                    -- Different MySQL:MariaDB
+                    SELECT ~ x'FF' ; -- 18446744073709551615
+                    SELECT ~ x'41' ; -- 18446744073709551615
+                    SELECT ~ x'AA' ; -- 18446744073709551615
+                    -- 1 row in set, 1 warning (0.00 sec)
+
+                    --
+                    -- Bit NOT - pass (64bit unsigned)
+                    SELECT ~ 0xFF ; -- 18446744073709551360
+                    SELECT ~ 0x41 ; -- 18446744073709551550
+                    SELECT ~ 0xAA ; -- 18446744073709551445
+
+                    --
+                    -- Bit AND - FAILS
+                    -- Different MySQL:MariaDB
+                    SELECT x'FF' & x'AA' ; -- 0
+                    SELECT x'41' & x'AA' ; -- 0
+                    SELECT x'AA' & x'AA' ; -- 0
+                    -- 1 row in set, 2 warnings (0.00 sec)
+
+                    --
+                    -- Bit AND - pass
+                    SELECT 0xFF & 0xAA ; -- 170
+                    SELECT 0x41 & 0xAA ; --   0
+                    SELECT 0xAA & 0xAA ; -- 170
+
+                    --
+                    -- Bit XOR - FAILS
+                    -- Different MySQL:MariaDB
+                    SELECT x'FF' ^ x'AA' ; -- 0
+                    SELECT x'41' ^ x'AA' ; -- 0
+                    SELECT x'AA' ^ x'AA' ; -- 0
+                    -- 1 row in set, 2 warnings (0.00 sec)
+
+                    --
+                    -- Bit XOR - pass
+                    SELECT 0xFF ^ 0xAA ; --  85
+                    SELECT 0x41 ^ 0xAA ; -- 235
+                    SELECT 0xAA ^ 0xAA ; --   0
+
+                    --
+                    -- Sampling based on id - FAILS
+                    -- Different MySQL:MariaDB
+                    SELECT id FROM alpha_source WHERE (id & x'0F') = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & x'07') = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & x'03') = 0  ;
+                    46 rows in set, 46 warnings (0.00 sec)
+
+                    --
+                    -- Sampling based on id - pass
+                    SELECT id FROM alpha_source WHERE (id & 0x0F) = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & 0x07) = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & 0x03) = 0  ;
 
             \q
 
@@ -236,17 +465,17 @@ mess :-(
                 --volume "${datadir}:/database.init/" \
                 "cosmopterix/derby:10.12-1.0"
 
-            docker logs -f 'albert'
+            waitlog 'albert' '^Init'
 
             docker exec \
                 --tty \
                 --interactive \
                 'albert' \
                 derby-client
-    
-....
-....
 
+                --
+                -- No support for bitwise operators or hexadecimal numbers.
+                -- 
 
             quit;
 
@@ -278,13 +507,55 @@ mess :-(
                 --volume "${datadir}:/database.init/" \
                 "cosmopterix/hsqldb:2.3-1.0"
 
-            docker logs -f 'albert'
+            waitlog 'albert' '^Init'
 
             docker exec \
                 --tty \
                 --interactive \
                 'albert' \
                 hsqldb-client
+
+-- Not got it working yet.
+
+
+
+                CREATE TABLE test (
+                    col_one INTEGER,
+                    col_two INTEGER
+                    );
+
+                INSERT INTO test VALUES (65, 65);
+
+                INSERT INTO test VALUES (0x41,  65);
+                INSERT INTO test VALUES (x'41', 65);
+                INSERT INTO test VALUES (X'41', 65);
+
+                INSERT INTO test VALUES (X'01FF', 65);
+
+
+
+
+                --
+                -- Query without FROM is not supported.
+                SELECT 65 ;
+
+                --
+                -- Decimal literal - pass
+                SELECT 65 FROM alpha_source LIMIT 1 ;
+
+                --
+                -- Hexadecimal literal - FAIL
+                SELECT 0xFF FROM alpha_source LIMIT 1 ;
+
+                -- String literal - FAIL
+                SELECT x'FF' FROM alpha_source LIMIT 1 ;
+
+                -- String literal plus - FAIL
+                SELECT X'FF' - 1 FROM alpha_source LIMIT 1 ;
+                SELECT 0 - 1 FROM alpha_source LIMIT 1 ;
+
+
+X'01FF'
 
 ....
 ....
