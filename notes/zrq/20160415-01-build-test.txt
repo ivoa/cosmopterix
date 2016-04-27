@@ -24,11 +24,14 @@
 # Create our local settings.
 #[user@desktop]
 
-    cat > "${HOME:?}/cosmopterix.settings" << EOF
+    if [ ! -e "${HOME:?}/cosmopterix.settings" ]
+    then
+        cat > "${HOME:?}/cosmopterix.settings" << EOF
 COSMOPTERIX_HOME=/var/local/projects/edinburgh/cosmopterix
 COSMOPTERIX_CODE=${COSMOPTERIX_HOME:?}/github
 EOF
-
+    fi
+    
 # -----------------------------------------------------
 # Remove existing containers and images.
 #[user@desktop]

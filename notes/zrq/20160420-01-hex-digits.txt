@@ -101,9 +101,9 @@ waitlog()
 
                     --
                     -- Sampling based on id.
-                    SELECT id FROM alpha_source WHERE (id & x'0F'::int) = 0  ;
-                    SELECT id FROM alpha_source WHERE (id & x'07'::int) = 0  ;
-                    SELECT id FROM alpha_source WHERE (id & x'03'::int) = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & x'0F'::int) = 0  ; --  2 rows
+                    SELECT id FROM alpha_source WHERE (id & x'07'::int) = 0  ; --  5 rows
+                    SELECT id FROM alpha_source WHERE (id & x'03'::int) = 0  ; -- 11 rows
 
                 \q
 
@@ -148,19 +148,19 @@ waitlog()
 
                     --
                     -- String literal - FAIL
-                    -- This is interpreted as the character literal,
+                    -- Interpreted as the character literal,
                     -- in a columns named x'FF', x'41' and x'AA'.
-                    SELECT x'FF' ; -- �
-                    SELECT X'41' ; -- A
-                    SELECT x'AA' ; -- �
+                    -- SELECT x'FF' ; -- �
+                    -- SELECT X'41' ; -- A
+                    -- SELECT x'AA' ; -- �
 
                     --
                     -- Numeric literal - FAILS
                     -- Interpreted as the char value in
                     -- columns named 0xFF, 0x41 and 0xAA.
-                    SELECT 0xFF  ; -- �
-                    SELECT 0x41  ; -- A
-                    SELECT 0xAA  ; -- �
+                    -- SELECT 0xFF  ; -- �
+                    -- SELECT 0x41  ; -- A
+                    -- SELECT 0xAA  ; -- �
 
                     --
                     -- Upper case 'X' rejected - FAILS
@@ -170,8 +170,9 @@ waitlog()
 
                     --
                     -- String literal plus - works
+                    -- Different MySQL:MariaDB
                     SELECT x'FF' + 0 ; -- 255
-                    SELECT X'41' + 0 ; --  65
+                    SELECT x'41' + 0 ; --  65
                     SELECT X'AA' + 0 ; -- 170
 
                     --
@@ -182,12 +183,14 @@ waitlog()
 
                     --
                     -- CAST string literal - works
+                    -- Different MySQL:MariaDB
                     SELECT CAST(x'FF' AS SIGNED) ; -- 255
-                    SELECT CAST(X'41' AS SIGNED) ; --  65
+                    SELECT CAST(x'41' AS SIGNED) ; --  65
                     SELECT CAST(x'AA' AS SIGNED) ; -- 170
 
                     --
                     -- CAST string literal - works
+                    -- Different MySQL:MariaDB
                     SELECT CAST(x'FF' AS UNSIGNED) ; -- 255
                     SELECT CAST(X'41' AS UNSIGNED) ; --  65
                     SELECT CAST(x'AA' AS UNSIGNED) ; -- 170
@@ -220,45 +223,54 @@ waitlog()
 
                     --
                     -- Bit NOT (64bit unsigned)
+                    -- Different MySQL:MariaDB
                     SELECT ~ x'FF' ; -- 18446744073709551360
                     SELECT ~ x'41' ; -- 18446744073709551550
                     SELECT ~ x'AA' ; -- 18446744073709551445
 
+                    --
+                    -- Bit NOT (64bit unsigned)
                     SELECT ~ 0xFF ; -- 18446744073709551360
                     SELECT ~ 0x41 ; -- 18446744073709551550
                     SELECT ~ 0xAA ; -- 18446744073709551445
 
                     --
                     -- Bit AND
+                    -- Different MySQL:MariaDB
                     SELECT x'FF' & x'AA' ; -- 170
                     SELECT x'41' & x'AA' ; --   0
                     SELECT x'AA' & x'AA' ; -- 170
 
+                    --
+                    -- Bit AND
                     SELECT 0xFF & 0xAA ; -- 170
                     SELECT 0x41 & 0xAA ; --   0
                     SELECT 0xAA & 0xAA ; -- 170
 
                     --
                     -- Bit XOR
+                    -- Different MySQL:MariaDB
                     SELECT x'FF' ^ x'AA' ; --  85
                     SELECT x'41' ^ x'AA' ; -- 235
                     SELECT x'AA' ^ x'AA' ; --   0
 
+                    --
+                    -- Bit XOR
                     SELECT 0xFF ^ 0xAA ; --  85
                     SELECT 0x41 ^ 0xAA ; -- 235
                     SELECT 0xAA ^ 0xAA ; --   0
 
                     --
                     -- Sampling based on id - works
-                    SELECT id FROM alpha_source WHERE (id & x'0F') = 0  ;
-                    SELECT id FROM alpha_source WHERE (id & x'07') = 0  ;
-                    SELECT id FROM alpha_source WHERE (id & x'03') = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & x'0F') = 0  ; --  2 rows
+                    SELECT id FROM alpha_source WHERE (id & x'07') = 0  ; --  5 rows
+                    SELECT id FROM alpha_source WHERE (id & x'03') = 0  ; -- 11 rows
 
                     --
                     -- Sampling based on id - works
-                    SELECT id FROM alpha_source WHERE (id & 0x0F) = 0  ;
-                    SELECT id FROM alpha_source WHERE (id & 0x07) = 0  ;
-                    SELECT id FROM alpha_source WHERE (id & 0x03) = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & 0x0F) = 0  ; --  2 rows
+                    SELECT id FROM alpha_source WHERE (id & 0x07) = 0  ; --  5 rows
+                    SELECT id FROM alpha_source WHERE (id & 0x03) = 0  ; -- 11 rows
 
                 \q
 
@@ -303,19 +315,19 @@ waitlog()
 
                     --
                     -- String literal - FAIL
-                    -- This is interpreted as the character literal,
+                    -- Interpreted as the character literal,
                     -- in a columns named x'FF', x'41' and x'AA'.
-                    SELECT x'FF' ; -- �
-                    SELECT X'41' ; -- A
-                    SELECT x'AA' ; -- �
+                    -- SELECT x'FF' ; -- �
+                    -- SELECT X'41' ; -- A
+                    -- SELECT x'AA' ; -- �
 
                     --
                     -- Numeric literal - FAILS
                     -- Interpreted as the char value in
                     -- columns named 0xFF, 0x41 and 0xAA.
-                    SELECT 0xFF  ; -- �
-                    SELECT 0x41  ; -- A
-                    SELECT 0xAA  ; -- �
+                    -- SELECT 0xFF  ; -- �
+                    -- SELECT 0x41  ; -- A
+                    -- SELECT 0xAA  ; -- �
 
                     --
                     -- Upper case 'X' rejected - FAILS
@@ -326,9 +338,9 @@ waitlog()
                     --
                     -- String literal plus - FAILS
                     -- Different MySQL:MariaDB
-                    SELECT x'FF' + 0 ; -- 0
-                    SELECT X'41' + 0 ; -- 0
-                    SELECT X'AA' + 0 ; -- 0
+                    -- SELECT x'FF' + 0 ; -- 0
+                    -- SELECT X'41' + 0 ; -- 0
+                    -- SELECT X'AA' + 0 ; -- 0
                     -- 1 row in set, 1 warning (0.00 sec)
 
                     --
@@ -339,25 +351,25 @@ waitlog()
 
                     -- CAST string literal - FAILS
                     -- Different MySQL:MariaDB
-                    SELECT CAST(x'FF' AS INTEGER) ; -- 0
-                    SELECT CAST(X'41' AS INTEGER) ; -- 0
-                    SELECT CAST(x'AA' AS INTEGER) ; -- 0
+                    -- SELECT CAST(x'FF' AS INTEGER) ; -- 0
+                    -- SELECT CAST(X'41' AS INTEGER) ; -- 0
+                    -- SELECT CAST(x'AA' AS INTEGER) ; -- 0
                     -- 1 row in set, 1 warning (0.00 sec)
 
                     --
                     -- CAST string literal - FAILS
                     -- Different MySQL:MariaDB
-                    SELECT CAST(x'FF' AS SIGNED) ; -- 0
-                    SELECT CAST(X'41' AS SIGNED) ; -- 0
-                    SELECT CAST(x'AA' AS SIGNED) ; -- 0
+                    -- SELECT CAST(x'FF' AS SIGNED) ; -- 0
+                    -- SELECT CAST(X'41' AS SIGNED) ; -- 0
+                    -- SELECT CAST(x'AA' AS SIGNED) ; -- 0
                     -- 1 row in set, 1 warning (0.00 sec)
 
                     --
                     -- CAST string literal - FAILS
                     -- Different MySQL:MariaDB
-                    SELECT CAST(x'FF' AS UNSIGNED) ; -- 0
-                    SELECT CAST(X'41' AS UNSIGNED) ; -- 0
-                    SELECT CAST(x'AA' AS UNSIGNED) ; -- 0
+                    -- SELECT CAST(x'FF' AS UNSIGNED) ; -- 0
+                    -- SELECT CAST(X'41' AS UNSIGNED) ; -- 0
+                    -- SELECT CAST(x'AA' AS UNSIGNED) ; -- 0
                     -- 1 row in set, 1 warning (0.00 sec)
 
                     --
@@ -382,9 +394,9 @@ waitlog()
                     --
                     -- Bit NOT - FAILS
                     -- Different MySQL:MariaDB
-                    SELECT ~ x'FF' ; -- 18446744073709551615
-                    SELECT ~ x'41' ; -- 18446744073709551615
-                    SELECT ~ x'AA' ; -- 18446744073709551615
+                    -- SELECT ~ x'FF' ; -- 18446744073709551615
+                    -- SELECT ~ x'41' ; -- 18446744073709551615
+                    -- SELECT ~ x'AA' ; -- 18446744073709551615
                     -- 1 row in set, 1 warning (0.00 sec)
 
                     --
@@ -396,9 +408,9 @@ waitlog()
                     --
                     -- Bit AND - FAILS
                     -- Different MySQL:MariaDB
-                    SELECT x'FF' & x'AA' ; -- 0
-                    SELECT x'41' & x'AA' ; -- 0
-                    SELECT x'AA' & x'AA' ; -- 0
+                    -- SELECT x'FF' & x'AA' ; -- 0
+                    -- SELECT x'41' & x'AA' ; -- 0
+                    -- SELECT x'AA' & x'AA' ; -- 0
                     -- 1 row in set, 2 warnings (0.00 sec)
 
                     --
@@ -410,9 +422,9 @@ waitlog()
                     --
                     -- Bit XOR - FAILS
                     -- Different MySQL:MariaDB
-                    SELECT x'FF' ^ x'AA' ; -- 0
-                    SELECT x'41' ^ x'AA' ; -- 0
-                    SELECT x'AA' ^ x'AA' ; -- 0
+                    -- SELECT x'FF' ^ x'AA' ; -- 0
+                    -- SELECT x'41' ^ x'AA' ; -- 0
+                    -- SELECT x'AA' ^ x'AA' ; -- 0
                     -- 1 row in set, 2 warnings (0.00 sec)
 
                     --
@@ -424,16 +436,16 @@ waitlog()
                     --
                     -- Sampling based on id - FAILS
                     -- Different MySQL:MariaDB
-                    SELECT id FROM alpha_source WHERE (id & x'0F') = 0  ;
-                    SELECT id FROM alpha_source WHERE (id & x'07') = 0  ;
-                    SELECT id FROM alpha_source WHERE (id & x'03') = 0  ;
+                    -- SELECT id FROM alpha_source WHERE (id & x'0F') = 0  ; -- 46 rows
+                    -- SELECT id FROM alpha_source WHERE (id & x'07') = 0  ; -- 46 rows
+                    -- SELECT id FROM alpha_source WHERE (id & x'03') = 0  ; -- 46 rows
                     46 rows in set, 46 warnings (0.00 sec)
 
                     --
                     -- Sampling based on id - pass
-                    SELECT id FROM alpha_source WHERE (id & 0x0F) = 0  ;
-                    SELECT id FROM alpha_source WHERE (id & 0x07) = 0  ;
-                    SELECT id FROM alpha_source WHERE (id & 0x03) = 0  ;
+                    SELECT id FROM alpha_source WHERE (id & 0x0F) = 0  ; --  2 rows
+                    SELECT id FROM alpha_source WHERE (id & 0x07) = 0  ; --  5 rows
+                    SELECT id FROM alpha_source WHERE (id & 0x03) = 0  ; -- 11 rows
 
             \q
 
@@ -515,51 +527,31 @@ waitlog()
                 'albert' \
                 hsqldb-client
 
--- Not got it working yet.
+                    --
+                    -- Query without FROM is not supported.
+                    -- SELECT 65 ;
 
+                    --
+                    -- Decimal literal - pass
+                    SELECT 65 FROM alpha_source LIMIT 1 ;
 
+                    --
+                    -- Numeric literal - FAIL
+                    -- SELECT 0xFF FROM alpha_source LIMIT 1 ; -- 0
 
-                CREATE TABLE test (
-                    col_one INTEGER,
-                    col_two INTEGER
-                    );
+                    -- String literal - FAIL
+                    -- SELECT x'FF' FROM alpha_source LIMIT 1 ; -- ff
 
-                INSERT INTO test VALUES (65, 65);
+                    -- String literal plus - FAIL
+                    -- SELECT x'FF' - 1 FROM alpha_source LIMIT 1 ;
+                    SELECT 255 - 1 FROM alpha_source LIMIT 1 ;
 
-                INSERT INTO test VALUES (0x41,  65);
-                INSERT INTO test VALUES (x'41', 65);
-                INSERT INTO test VALUES (X'41', 65);
-
-                INSERT INTO test VALUES (X'01FF', 65);
-
-
-
-
-                --
-                -- Query without FROM is not supported.
-                SELECT 65 ;
-
-                --
-                -- Decimal literal - pass
-                SELECT 65 FROM alpha_source LIMIT 1 ;
-
-                --
-                -- Hexadecimal literal - FAIL
-                SELECT 0xFF FROM alpha_source LIMIT 1 ;
-
-                -- String literal - FAIL
-                SELECT x'FF' FROM alpha_source LIMIT 1 ;
-
-                -- String literal plus - FAIL
-                SELECT X'FF' - 1 FROM alpha_source LIMIT 1 ;
-                SELECT 0 - 1 FROM alpha_source LIMIT 1 ;
-
-
-X'01FF'
-
-....
-....
-
+                    --
+                    -- Sampling based on id - FAIL
+                    -- SELECT id FROM alpha_source WHERE (id & 0x0F)  = 0  ;
+                    -- SELECT id FROM alpha_source WHERE (id & x'0F') = 0  ;
+                    -- SELECT id FROM alpha_source WHERE (id & 16)    = 0  ;
+                    -- SELECT id FROM alpha_source WHERE (id < 16) ;
 
             \q
 
@@ -571,4 +563,72 @@ X'01FF'
 #[user@desktop]
 
     docker rm --volumes $(docker stop 'albert')
+
+# -------------------------------------------------------------------------------------------
+# Download our Oracle RPM file.
+#[user@desktop]
+
+    #
+    # Download the zipfile from Oracle.
+    # http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html
+
+    version=11.2.0-1.0
+    rpmfile=oracle-xe-${version}.x86_64.rpm
+    zipfile=${rpmfile}.zip
+    tarfile=${rpmfile}.tar.gz
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+        pushd binaries
+            if [ ! -e "${rpmfile}" ]
+            then
+                unzip -j "${zipfile}" '*.rpm'
+            fi
+            if [ ! -e "${tarfile}" ]
+            then
+                tar -cvzf "${tarfile}" \
+                    "${rpmfile}"
+            fi
+        popd
+
+        pushd docker
+            pushd madhead-oracle-xe
+                if [ ! -d 'rpm' ]
+                then
+                    mkdir 'rpm'
+                fi
+                if [ ! -e "rpm/${tarfile}" ]
+                then
+                    ln "../../binaries/${tarfile}" "rpm/${tarfile}"
+                fi
+            popd
+        popd
+    popd
+
+# -----------------------------------------------------
+# Build our container.
+#[user@desktop]
+
+    pushd /var/local/projects/edinburgh/database/oracle
+
+        docker build \
+            -t "madhead-docker-oracle-xe:11.2" \
+            docker/madhead-oracle-xe
+    
+    popd
+
+    #
+    # During the configuration of Oracle XE instance two files - init.ora and initXETemp.ora -
+    # are overridden with ones from config directory of this repo.
+    # The only difference is that memory_target parameter is commented in them to prevent
+    # ORA-00845: MEMORY_TARGET not supported on this system error.
+    # The only piece of magic in this image :).
+    #
+
+# -------------------------------------------------------------------------------------------
+# Run our Oracle container.
+#[user@desktop]
 
