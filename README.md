@@ -16,16 +16,17 @@ Working containers for :
 * [MariaDB](docker/mariadb)
 * [Apache Derby](docker/derby)
 * [HyperSQL](docker/hsqldb)
-* [Oracle](docker/oracle) (requires external download)
 
 Work in progress for :
+* [Oracle Xe](docker/oracle) (requires external download)
 * [SQLite](docker/sqlite)
 
-Plans and notes for :
+Plans for :
 * [Firebird](docker/firebird)
 * [SQLServer](docker/sqlserver)
 * [Sybase](docker/sybase)
 * [DB2](docker/db2)
-
-
+* [Qserv](https://dev.lsstcorp.org/trac/wiki/db/Qserv)
+* [SpiderEngine](https://mariadb.com/kb/en/mariadb/spider-storage-engine-overview/)
+* [Oracle TimesTen](http://www.oracle.com/technetwork/database/database-technologies/timesten/overview/index.html)
 

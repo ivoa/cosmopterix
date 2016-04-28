@@ -120,6 +120,11 @@ waitlog()
 # Test our MySQL container.
 #[user@desktop]
 
+    #
+    # MySQL reference manual
+    # 10.1.4 Hexadecimal Literals
+    # https://dev.mysql.com/doc/refman/5.7/en/hexadecimal-literals.html
+
     source "${HOME:?}/cosmopterix.settings"
     pushd "${COSMOPTERIX_CODE:?}"
 
@@ -633,17 +638,13 @@ waitlog()
     popd
 
 # -----------------------------------------------------
-# Build our container.
+# Build our Oracle containers.
 #[user@desktop]
 
     source "${HOME:?}/cosmopterix.settings"
     pushd "${COSMOPTERIX_CODE:?}"
 
         pushd docker
-
-            docker build \
-                --tag "cosmopterix/oracle-linux:6.7-1.0" \
-                oracle/oracle-linux/6.7
 
             docker build \
                 --tag "cosmopterix/oracle-linux:7.2-1.0" \
@@ -657,6 +658,7 @@ waitlog()
     popd
 
     #
+    # From MadHead (https://github.com/madhead/docker-oracle-xe)
     # During the configuration of Oracle XE instance two files - init.ora and initXETemp.ora -
     # are overridden with ones from config directory of this repo.
     # The only difference is that memory_target parameter is commented in them to prevent
@@ -664,7 +666,99 @@ waitlog()
     # The only piece of magic in this image :).
     #
 
+    #
+    # TODO - Move the create database step from the build time to run time.
+    # TODO - Move the database files in a volume.
+    # TODO - Configure database using config scripts.
+
 # -------------------------------------------------------------------------------------------
 # Run our Oracle container.
 #[user@desktop]
+
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            datadir=$(mktemp -d)
+            cp "oracle/oracle-xe/11.2/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql"  "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name 'albert' \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/oracle-xe:11.2-1.0"
+
+            docker logs -f 'albert'
+
+                Thu Apr 28 10:52:43 UTC 2016
+                Starting Oracle Net Listener.
+                Starting Oracle Database 11g Express Edition instance.
+
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                sqlplus
+
+                    # Enter user-name: system
+                    # Enter password: oracle
+
+                    # Connected to:
+                    # Oracle Database 11g Express Edition Release 11.2.0.2.0 - 64bit Production
+                    # SQL> 
+
+                    START /database.init/001.sql
+
+                        Table created.
+                        Sequence created.
+                        Trigger created.
+
+                    START /database.init/002.sql
+
+                        1 row created.
+                        1 row created.
+                        ....
+                        ....
+                        1 row created.
+
+                    #
+                    # Pagination using ROWNUM.
+                    # http://www.oracle.com/technetwork/issue-archive/2006/06-sep/o56asktom-086197.html
+                    SELECT
+                        id, ra, decl
+                    FROM
+                        (
+                        SELECT
+                            id, ra, decl, ROWNUM as rn
+                        FROM
+                            alpha_source
+                        )
+                    WHERE rn > 10 AND rn <= 20
+                    ;
+
+                    #
+                    # Hexadecimal Constants in Oracle
+                    # http://www.sqlines.com/oracle/hex_constants
+                    SELECT TO_NUMBER('FF', 'xx') FROM alpha_source WHERE id = 1 ;
+                    SELECT TO_NUMBER('41', 'xx') FROM alpha_source WHERE id = 1 ;
+                    SELECT TO_NUMBER('AA', 'xx') FROM alpha_source WHERE id = 1 ;
+
+
+
+
+
+                quit
+
+        popd
+    popd
+
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
 
