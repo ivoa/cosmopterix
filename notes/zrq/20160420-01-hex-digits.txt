@@ -580,30 +580,54 @@ waitlog()
     source "${HOME:?}/cosmopterix.settings"
     pushd "${COSMOPTERIX_CODE:?}"
 
-        pushd docker
+        if [ ! -e 'binaries/oracle' ]
+        then
+            mkdir -p 'binaries/oracle'
+        fi
 
         pushd binaries
-            if [ ! -e "${rpmfile}" ]
-            then
-                unzip -j "${zipfile}" '*.rpm'
-            fi
-            if [ ! -e "${tarfile}" ]
-            then
-                tar -cvzf "${tarfile}" \
-                    "${rpmfile}"
-            fi
+            pushd oracle
+                if [ ! -e "${tarfile}" ]
+                then
+                    if [ ! -e "${rpmfile}" ]
+                    then
+                        if [ -e "${zipfile}" ]
+                        then
+                            unzip -j "${zipfile}" '*.rpm'
+                        fi
+                    fi
+                    if [ -e "${rpmfile}" ]
+                    then
+                        tar -cvzf "${tarfile}" \
+                            "${rpmfile}"
+                    fi
+                fi
+            popd
         popd
 
+        if [ ! -e "binaries/oracle/${tarfile}" ]
+        then
+            echo ""
+            echo "-------- --------"
+            echo "Please download the Oracle-Xe (eXpress Edition) zipfile"
+            echo "Source [http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html]"
+            echo "Target [$(pwd)]"
+            echo "-------- --------"
+            echo ""
+        fi
+
         pushd docker
-            pushd madhead-oracle-xe
+            pushd oracle/oracle-xe/11.2
                 if [ ! -d 'rpm' ]
                 then
                     mkdir 'rpm'
                 fi
-                if [ ! -e "rpm/${tarfile}" ]
-                then
-                    ln "../../binaries/${tarfile}" "rpm/${tarfile}"
-                fi
+                pushd rpm
+                    if [ ! -e "${tarfile}" ]
+                    then
+                        ln "${COSMOPTERIX_CODE:?}/binaries/oracle/${tarfile}" "${tarfile}"
+                    fi
+                popd
             popd
         popd
     popd
@@ -612,12 +636,24 @@ waitlog()
 # Build our container.
 #[user@desktop]
 
-    pushd /var/local/projects/edinburgh/database/oracle
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
 
-        docker build \
-            -t "madhead-docker-oracle-xe:11.2" \
-            docker/madhead-oracle-xe
+        pushd docker
+
+            docker build \
+                --tag "cosmopterix/oracle-linux:6.7-1.0" \
+                oracle/oracle-linux/6.7
+
+            docker build \
+                --tag "cosmopterix/oracle-linux:7.2-1.0" \
+                oracle/oracle-linux/7.2
+            
+            docker build \
+                --tag "cosmopterix/oracle-xe:11.2-1.0" \
+                oracle/oracle-xe/11.2
     
+        popd
     popd
 
     #

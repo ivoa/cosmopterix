@@ -1,4 +1,6 @@
 binaries/
+docker/oracle/oracle-xe/11.2/rpm/
+
 target/
 pom.xml.tag
 pom.xml.releaseBackup
