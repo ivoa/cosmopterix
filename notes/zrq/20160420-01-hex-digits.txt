@@ -41,8 +41,8 @@ waitlog()
         pushd docker
         
             datadir=$(mktemp -d)
-            cp "pgsql/sql/alpha-source.sql" "${datadir}/001.sql"
-            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+            cp "pgsql/sql/alpha-source.sql" "${datadir}/01-alpha.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/02-data.sql"
 
             docker run \
                 --detach \
@@ -52,6 +52,8 @@ waitlog()
 
             waitlog 'albert' '^Init'
 
+            sleep 10
+
             docker exec \
                 --tty \
                 --interactive \
@@ -60,8 +62,11 @@ waitlog()
 
                     \pset pager off
 
+                    SELECT version() ;
+                    -- PostgreSQL 9.4.7 on x86_64-redhat-linux-gnu, compiled by gcc (GCC) 5.3.1 20151207 (Red Hat 5.3.1-2), 64-bit
+
                     --
-                    -- Numeric literal - FAILS
+                    -- Numeric literal - FAIL
                     -- Interpreted as the numeric literal zero,
                     -- in a columns named xFF, x41 and xAA.
                     -- SELECT 0xFF ; -- 0
@@ -69,32 +74,38 @@ waitlog()
                     -- SELECT 0xAA ; -- 0
 
                     --
-                    -- String literal plus - FAILS
+                    -- String literal plus - FAIL
                     -- Type missmatch between string and int.
                     -- SELECT x'FF' + 0 ;
                     -- SELECT x'41' + 0 ;
                     -- SELECT x'AA' + 0 ;
 
                     --
-                    -- Explicit type cast to int - works
+                    -- Explicit type cast to int - pass
                     SELECT x'FF'::int ; -- 255
                     SELECT x'41'::int ; --  65
                     SELECT x'AA'::int ; -- 170
 
                     --
-                    -- Bit NOT - works (signed int)
+                    -- Bit NOT - pass (signed int)
                     SELECT ~ x'FF'::int ; -- -256
                     SELECT ~ x'41'::int ; --  -66
                     SELECT ~ x'AA'::int ; -- -171
 
                     --
-                    -- Bit AND - works
+                    -- Bit AND - pass
                     SELECT x'FF'::int & x'AA'::int ; -- 170
                     SELECT x'41'::int & x'AA'::int ; --  0
                     SELECT x'AA'::int & x'AA'::int ; -- 170
 
                     --
-                    -- Bit XOR - works
+                    -- Bit OR - pass
+                    SELECT x'FF'::int | x'AA'::int ; -- 255
+                    SELECT x'41'::int | x'AA'::int ; -- 235
+                    SELECT x'AA'::int | x'AA'::int ; -- 170
+
+                    --
+                    -- Bit XOR - pass
                     SELECT x'FF'::int # x'AA'::int ; --  85
                     SELECT x'41'::int # x'AA'::int ; -- 235
                     SELECT x'AA'::int # x'AA'::int ; --   0
@@ -104,6 +115,27 @@ waitlog()
                     SELECT id FROM alpha_source WHERE (id & x'0F'::int) = 0  ; --  2 rows
                     SELECT id FROM alpha_source WHERE (id & x'07'::int) = 0  ; --  5 rows
                     SELECT id FROM alpha_source WHERE (id & x'03'::int) = 0  ; -- 11 rows
+
+                        -- 16
+                        -- 32
+
+                        --  8
+                        -- 16
+                        -- 24
+                        -- 32
+                        -- 40
+
+                        --  4
+                        --  8
+                        -- 12
+                        -- 16
+                        -- 20
+                        -- 24
+                        -- 28
+                        -- 32
+                        -- 36
+                        -- 40
+                        -- 44
 
                 \q
 
@@ -131,8 +163,8 @@ waitlog()
         pushd docker
         
             datadir=$(mktemp -d)
-            cp "mysql/sql/alpha-source.sql" "${datadir}/001.sql"
-            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+            cp "mysql/sql/alpha-source.sql" "${datadir}/01-alpha.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/02-data.sql"
 
             docker run \
                 --detach \
@@ -141,6 +173,8 @@ waitlog()
                 "cosmopterix/mysql:5.6-1.0"
 
             waitlog 'albert' '^Init'
+
+            sleep 10
 
             docker exec \
                 --tty \
@@ -160,7 +194,7 @@ waitlog()
                     -- SELECT x'AA' ; -- �
 
                     --
-                    -- Numeric literal - FAILS
+                    -- Numeric literal - FAIL
                     -- Interpreted as the char value in
                     -- columns named 0xFF, 0x41 and 0xAA.
                     -- SELECT 0xFF  ; -- �
@@ -168,114 +202,148 @@ waitlog()
                     -- SELECT 0xAA  ; -- �
 
                     --
-                    -- Upper case 'X' rejected - FAILS
+                    -- Upper case 'X' rejected - FAIL
                     -- SELECT 0XFF  ;
                     -- SELECT 0X41  ;
                     -- SELECT 0XAA  ;
 
                     --
-                    -- String literal plus - works
+                    -- String literal plus - pass
                     -- Different MySQL:MariaDB
                     SELECT x'FF' + 0 ; -- 255
                     SELECT x'41' + 0 ; --  65
                     SELECT X'AA' + 0 ; -- 170
 
                     --
-                    -- Numeric literal plus - works
+                    -- Numeric literal plus - pass
                     SELECT 0xFF  + 0 ; -- 255
                     SELECT 0x41  + 0 ; --  65
                     SELECT 0xAA  + 0 ; -- 170
 
                     --
-                    -- CAST string literal - works
+                    -- CAST string literal - pass
                     -- Different MySQL:MariaDB
                     SELECT CAST(x'FF' AS SIGNED) ; -- 255
                     SELECT CAST(x'41' AS SIGNED) ; --  65
                     SELECT CAST(x'AA' AS SIGNED) ; -- 170
 
                     --
-                    -- CAST string literal - works
+                    -- CAST string literal - pass
                     -- Different MySQL:MariaDB
                     SELECT CAST(x'FF' AS UNSIGNED) ; -- 255
                     SELECT CAST(X'41' AS UNSIGNED) ; --  65
                     SELECT CAST(x'AA' AS UNSIGNED) ; -- 170
 
                     --
-                    -- CAST string literal - FAILS
+                    -- CAST string literal - FAIL
                     -- Different MySQL:MariaDB
                     -- SELECT CAST(x'FF' AS INTEGER) ; -- 255
                     -- SELECT CAST(X'41' AS INTEGER) ; --  65
                     -- SELECT CAST(x'AA' AS INTEGER) ; -- 170
 
                     --
-                    -- CAST numeric literal - works
+                    -- CAST numeric literal - pass
                     SELECT CAST(0xFF AS SIGNED) ; -- 255
                     SELECT CAST(0x41 AS SIGNED) ; --  65
                     SELECT CAST(0xAA AS SIGNED) ; -- 170
 
                     --
-                    -- CAST numeric literal - works
+                    -- CAST numeric literal - pass
                     SELECT CAST(0xFF AS UNSIGNED) ; -- 255
                     SELECT CAST(0x41 AS UNSIGNED) ; --  65
                     SELECT CAST(0xAA AS UNSIGNED) ; -- 170
 
                     --
-                    -- CAST numeric literal - fails
+                    -- CAST numeric literal - FAIL
                     -- Different MySQL:MariaDB
                     -- SELECT CAST(0xFF AS INTEGER) ;
                     -- SELECT CAST(0x41 AS INTEGER) ;
                     -- SELECT CAST(0xAA AS INTEGER) ;
 
                     --
-                    -- Bit NOT (64bit unsigned)
+                    -- Bit NOT - pass (64bit unsigned)
                     -- Different MySQL:MariaDB
                     SELECT ~ x'FF' ; -- 18446744073709551360
                     SELECT ~ x'41' ; -- 18446744073709551550
                     SELECT ~ x'AA' ; -- 18446744073709551445
 
                     --
-                    -- Bit NOT (64bit unsigned)
+                    -- Bit NOT - pass (64bit unsigned)
                     SELECT ~ 0xFF ; -- 18446744073709551360
                     SELECT ~ 0x41 ; -- 18446744073709551550
                     SELECT ~ 0xAA ; -- 18446744073709551445
 
                     --
-                    -- Bit AND
+                    -- Bit AND - pass
                     -- Different MySQL:MariaDB
                     SELECT x'FF' & x'AA' ; -- 170
                     SELECT x'41' & x'AA' ; --   0
                     SELECT x'AA' & x'AA' ; -- 170
 
                     --
-                    -- Bit AND
+                    -- Bit AND - pass
                     SELECT 0xFF & 0xAA ; -- 170
                     SELECT 0x41 & 0xAA ; --   0
                     SELECT 0xAA & 0xAA ; -- 170
 
                     --
-                    -- Bit XOR
+                    -- Bit OR - pass
+                    -- Different MySQL:MariaDB
+                    SELECT x'FF' | x'AA' ; -- 255
+                    SELECT x'41' | x'AA' ; -- 235
+                    SELECT x'AA' | x'AA' ; -- 170
+
+                    --
+                    -- Bit OR - pass
+                    SELECT 0xFF | 0xAA ; -- 255
+                    SELECT 0x41 | 0xAA ; -- 235
+                    SELECT 0xAA | 0xAA ; -- 170
+
+                    --
+                    -- Bit XOR - pass
                     -- Different MySQL:MariaDB
                     SELECT x'FF' ^ x'AA' ; --  85
                     SELECT x'41' ^ x'AA' ; -- 235
                     SELECT x'AA' ^ x'AA' ; --   0
 
                     --
-                    -- Bit XOR
+                    -- Bit XOR - pass
                     SELECT 0xFF ^ 0xAA ; --  85
                     SELECT 0x41 ^ 0xAA ; -- 235
                     SELECT 0xAA ^ 0xAA ; --   0
 
                     --
-                    -- Sampling based on id - works
+                    -- Sampling based on id - pass
                     SELECT id FROM alpha_source WHERE (id & x'0F') = 0  ; --  2 rows
                     SELECT id FROM alpha_source WHERE (id & x'07') = 0  ; --  5 rows
                     SELECT id FROM alpha_source WHERE (id & x'03') = 0  ; -- 11 rows
 
                     --
-                    -- Sampling based on id - works
+                    -- Sampling based on id - pass
                     SELECT id FROM alpha_source WHERE (id & 0x0F) = 0  ; --  2 rows
                     SELECT id FROM alpha_source WHERE (id & 0x07) = 0  ; --  5 rows
                     SELECT id FROM alpha_source WHERE (id & 0x03) = 0  ; -- 11 rows
+
+                        -- 16
+                        -- 32
+
+                        --  8
+                        -- 16
+                        -- 24
+                        -- 32
+                        -- 40
+
+                        --  4
+                        --  8
+                        -- 12
+                        -- 16
+                        -- 20
+                        -- 24
+                        -- 28
+                        -- 32
+                        -- 36
+                        -- 40
+                        -- 44
 
                 \q
 
@@ -298,8 +366,8 @@ waitlog()
         pushd docker
         
             datadir=$(mktemp -d)
-            cp "mariadb/sql/alpha-source.sql" "${datadir}/001.sql"
-            cp "data/alpha-source-data.sql"   "${datadir}/002.sql"
+            cp "mariadb/sql/alpha-source.sql" "${datadir}/01-alpha.sql"
+            cp "data/alpha-source-data.sql"   "${datadir}/02-data.sql"
 
             docker run \
                 --detach \
@@ -309,6 +377,8 @@ waitlog()
 
             waitlog 'albert' '^Init'
 
+            sleep 10
+            
             docker exec \
                 --tty \
                 --interactive \
@@ -327,7 +397,7 @@ waitlog()
                     -- SELECT x'AA' ; -- �
 
                     --
-                    -- Numeric literal - FAILS
+                    -- Numeric literal - FAIL
                     -- Interpreted as the char value in
                     -- columns named 0xFF, 0x41 and 0xAA.
                     -- SELECT 0xFF  ; -- �
@@ -335,13 +405,13 @@ waitlog()
                     -- SELECT 0xAA  ; -- �
 
                     --
-                    -- Upper case 'X' rejected - FAILS
+                    -- Upper case 'X' rejected - FAIL
                     -- SELECT 0XFF  ;
                     -- SELECT 0X41  ;
                     -- SELECT 0XAA  ;
 
                     --
-                    -- String literal plus - FAILS
+                    -- String literal plus - FAIL
                     -- Different MySQL:MariaDB
                     -- SELECT x'FF' + 0 ; -- 0
                     -- SELECT X'41' + 0 ; -- 0
@@ -349,12 +419,12 @@ waitlog()
                     -- 1 row in set, 1 warning (0.00 sec)
 
                     --
-                    -- Numeric literal plus - works
+                    -- Numeric literal plus - pass
                     SELECT 0xFF  + 0 ; -- 255
                     SELECT 0x41  + 0 ; --  65
                     SELECT 0xAA  + 0 ; -- 170
 
-                    -- CAST string literal - FAILS
+                    -- CAST string literal - FAIL
                     -- Different MySQL:MariaDB
                     -- SELECT CAST(x'FF' AS INTEGER) ; -- 0
                     -- SELECT CAST(X'41' AS INTEGER) ; -- 0
@@ -362,7 +432,7 @@ waitlog()
                     -- 1 row in set, 1 warning (0.00 sec)
 
                     --
-                    -- CAST string literal - FAILS
+                    -- CAST string literal - FAIL
                     -- Different MySQL:MariaDB
                     -- SELECT CAST(x'FF' AS SIGNED) ; -- 0
                     -- SELECT CAST(X'41' AS SIGNED) ; -- 0
@@ -370,7 +440,7 @@ waitlog()
                     -- 1 row in set, 1 warning (0.00 sec)
 
                     --
-                    -- CAST string literal - FAILS
+                    -- CAST string literal - FAIL
                     -- Different MySQL:MariaDB
                     -- SELECT CAST(x'FF' AS UNSIGNED) ; -- 0
                     -- SELECT CAST(X'41' AS UNSIGNED) ; -- 0
@@ -378,26 +448,26 @@ waitlog()
                     -- 1 row in set, 1 warning (0.00 sec)
 
                     --
-                    -- CAST numeric literal - works
+                    -- CAST numeric literal - pass
                     SELECT CAST(0xFF AS SIGNED) ; -- 255
                     SELECT CAST(0x41 AS SIGNED) ; --  65
                     SELECT CAST(0xAA AS SIGNED) ; -- 170
 
                     --
-                    -- CAST numeric literal - works
+                    -- CAST numeric literal - pass
                     SELECT CAST(0xFF AS UNSIGNED) ; -- 255
                     SELECT CAST(0x41 AS UNSIGNED) ; --  65
                     SELECT CAST(0xAA AS UNSIGNED) ; -- 170
 
                     --
-                    -- CAST numeric literal - works
+                    -- CAST numeric literal - pass
                     -- Different MySQL:MariaDB
                     SELECT CAST(0xFF AS INTEGER) ; -- 255
                     SELECT CAST(0x41 AS INTEGER) ; --  65
                     SELECT CAST(0xAA AS INTEGER) ; -- 170
 
                     --
-                    -- Bit NOT - FAILS
+                    -- Bit NOT - FAIL
                     -- Different MySQL:MariaDB
                     -- SELECT ~ x'FF' ; -- 18446744073709551615
                     -- SELECT ~ x'41' ; -- 18446744073709551615
@@ -411,7 +481,7 @@ waitlog()
                     SELECT ~ 0xAA ; -- 18446744073709551445
 
                     --
-                    -- Bit AND - FAILS
+                    -- Bit AND - FAIL
                     -- Different MySQL:MariaDB
                     -- SELECT x'FF' & x'AA' ; -- 0
                     -- SELECT x'41' & x'AA' ; -- 0
@@ -425,7 +495,21 @@ waitlog()
                     SELECT 0xAA & 0xAA ; -- 170
 
                     --
-                    -- Bit XOR - FAILS
+                    -- Bit OR - FAIL
+                    -- Different MySQL:MariaDB
+                    -- SELECT x'FF' | x'AA' ; -- 0
+                    -- SELECT x'41' | x'AA' ; -- 0
+                    -- SELECT x'AA' | x'AA' ; -- 0
+                    -- 1 row in set, 2 warnings (0.00 sec)
+
+                    --
+                    -- Bit OR - pass
+                    SELECT 0xFF | 0xAA ; -- 255
+                    SELECT 0x41 | 0xAA ; -- 235
+                    SELECT 0xAA | 0xAA ; -- 170
+
+                    --
+                    -- Bit XOR - FAIL
                     -- Different MySQL:MariaDB
                     -- SELECT x'FF' ^ x'AA' ; -- 0
                     -- SELECT x'41' ^ x'AA' ; -- 0
@@ -439,7 +523,7 @@ waitlog()
                     SELECT 0xAA ^ 0xAA ; --   0
 
                     --
-                    -- Sampling based on id - FAILS
+                    -- Sampling based on id - FAIL
                     -- Different MySQL:MariaDB
                     -- SELECT id FROM alpha_source WHERE (id & x'0F') = 0  ; -- 46 rows
                     -- SELECT id FROM alpha_source WHERE (id & x'07') = 0  ; -- 46 rows
@@ -451,6 +535,27 @@ waitlog()
                     SELECT id FROM alpha_source WHERE (id & 0x0F) = 0  ; --  2 rows
                     SELECT id FROM alpha_source WHERE (id & 0x07) = 0  ; --  5 rows
                     SELECT id FROM alpha_source WHERE (id & 0x03) = 0  ; -- 11 rows
+
+                        -- 16
+                        -- 32
+
+                        --  8
+                        -- 16
+                        -- 24
+                        -- 32
+                        -- 40
+
+                        --  4
+                        --  8
+                        -- 12
+                        -- 16
+                        -- 20
+                        -- 24
+                        -- 28
+                        -- 32
+                        -- 36
+                        -- 40
+                        -- 44
 
             \q
 
@@ -473,8 +578,8 @@ waitlog()
         pushd docker
         
             datadir=$(mktemp -d)
-            cp "derby/sql/alpha-source.sql" "${datadir}/001.sql"
-            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+            cp "derby/sql/alpha-source.sql" "${datadir}/01-alpha.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/02-data.sql"
 
             docker run \
                 --detach \
@@ -483,6 +588,8 @@ waitlog()
                 "cosmopterix/derby:10.12-1.0"
 
             waitlog 'albert' '^Init'
+
+            sleep 10
 
             docker exec \
                 --tty \
@@ -493,6 +600,13 @@ waitlog()
                 --
                 -- No support for bitwise operators or hexadecimal numbers.
                 -- 
+
+                --
+                -- http://stackoverflow.com/questions/11101333/bitwise-operator-in-apache-derby
+                -- http://wiki.apache.org/db-derby/DerbySQLroutines
+                -- https://code.google.com/archive/p/apache-derby-functions/downloads
+                -- TODO - Create our own Java library for Derby.
+                --
 
             quit;
 
@@ -515,8 +629,8 @@ waitlog()
         pushd docker
         
             datadir=$(mktemp -d)
-            cp "hsqldb/sql/alpha-source.sql" "${datadir}/001.sql"
-            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+            cp "hsqldb/sql/alpha-source.sql" "${datadir}/01-alpha.sql"
+            cp "data/alpha-source-data.sql"  "${datadir}/02-data.sql"
 
             docker run \
                 --detach \
@@ -525,6 +639,8 @@ waitlog()
                 "cosmopterix/hsqldb:2.3-1.0"
 
             waitlog 'albert' '^Init'
+
+            sleep 10
 
             docker exec \
                 --tty \
@@ -544,19 +660,153 @@ waitlog()
                     -- Numeric literal - FAIL
                     -- SELECT 0xFF FROM alpha_source LIMIT 1 ; -- 0
 
+                    --
                     -- String literal - FAIL
                     -- SELECT x'FF' FROM alpha_source LIMIT 1 ; -- ff
 
+                    --
                     -- String literal plus - FAIL
-                    -- SELECT x'FF' - 1 FROM alpha_source LIMIT 1 ;
-                    SELECT 255 - 1 FROM alpha_source LIMIT 1 ;
+                    -- SELECT x'FF' + 0 FROM alpha_source LIMIT 1 ;
+                    -- SELECT 255   + 0 FROM alpha_source LIMIT 1 ;
+
+                    --
+                    -- HEXTORAW - FAIL
+                    -- SELECT HEXTORAW('FF') FROM alpha_source LIMIT 1 ; -- ff
+
+                    --
+                    -- CAST - FAIL
+                    SELECT CAST('FF' AS INTEGER) FROM alpha_source LIMIT 1 ;
+                    SELECT CAST('0FF' AS INTEGER) FROM alpha_source LIMIT 1 ;
+                    SELECT CAST(x'FF' AS INTEGER) FROM alpha_source LIMIT 1 ;
+                    SELECT CAST('xFF' AS INTEGER) FROM alpha_source LIMIT 1 ;
+                    SELECT CAST('0FF' AS INTEGER) FROM alpha_source LIMIT 1 ;
+                    SELECT CAST('0xFF' AS INTEGER) FROM alpha_source LIMIT 1 ;
+
+                    --
+                    -- Java Integer.decode - pass
+                    SELECT "java.lang.Integer.decode"('0xFF') FROM alpha_source LIMIT 1 ; -- 255
+                    SELECT "java.lang.Integer.decode"('0x41') FROM alpha_source LIMIT 1 ; --  65
+                    SELECT "java.lang.Integer.decode"('0xAA') FROM alpha_source LIMIT 1 ; -- 170
+
+                    --
+                    -- Java Long.decode - pass
+                    SELECT "java.lang.Integer.decode"('#FF') FROM alpha_source LIMIT 1 ; -- 255
+                    SELECT "java.lang.Integer.decode"('#41') FROM alpha_source LIMIT 1 ; --  65
+                    SELECT "java.lang.Integer.decode"('#AA') FROM alpha_source LIMIT 1 ; -- 170
+
+                    --
+                    -- Java Integer.parseInt - pass
+                    SELECT "java.lang.Integer.parseInt"('FF', 16) FROM alpha_source LIMIT 1 ; -- 255
+                    SELECT "java.lang.Integer.parseInt"('41', 16) FROM alpha_source LIMIT 1 ; --  65
+                    SELECT "java.lang.Integer.parseInt"('AA', 16) FROM alpha_source LIMIT 1 ; -- 170
+
+                    --
+                    -- Java Long.parseLong - pass
+                    SELECT "java.lang.Long.parseLong"('FF', 16) FROM alpha_source LIMIT 1 ; -- 255
+                    SELECT "java.lang.Long.parseLong"('41', 16) FROM alpha_source LIMIT 1 ; --  65
+                    SELECT "java.lang.Long.parseLong"('AA', 16) FROM alpha_source LIMIT 1 ; -- 170
+
+                    --
+                    -- Java Long.decode - pass
+                    SELECT "java.lang.Long.decode"('0xFF') FROM alpha_source LIMIT 1 ; -- 255
+                    SELECT "java.lang.Long.decode"('0x41') FROM alpha_source LIMIT 1 ; --  65
+                    SELECT "java.lang.Long.decode"('0xAA') FROM alpha_source LIMIT 1 ; -- 170
+
+                    --
+                    -- Java Long.decode - pass
+                    SELECT "java.lang.Long.decode"('#FF') FROM alpha_source LIMIT 1 ; -- 255
+                    SELECT "java.lang.Long.decode"('#41') FROM alpha_source LIMIT 1 ; --  65
+                    SELECT "java.lang.Long.decode"('#AA') FROM alpha_source LIMIT 1 ; -- 170
+
+                    --
+                    -- Bit NOT (signed int) - pass
+                    SELECT BITNOT("java.lang.Integer.decode"('0xFF')) FROM alpha_source LIMIT 1 ; -- -256
+                    SELECT BITNOT("java.lang.Integer.decode"('0x41')) FROM alpha_source LIMIT 1 ; --  -66
+                    SELECT BITNOT("java.lang.Integer.decode"('0xAA')) FROM alpha_source LIMIT 1 ; -- -171
+
+                    --
+                    -- Bit AND - pass
+                    SELECT BITAND("java.lang.Integer.decode"('0xFF'), "java.lang.Integer.decode"('0xAA')) FROM alpha_source LIMIT 1 ; -- 170
+                    SELECT BITAND("java.lang.Integer.decode"('0x41'), "java.lang.Integer.decode"('0xAA')) FROM alpha_source LIMIT 1 ; --   0
+                    SELECT BITAND("java.lang.Integer.decode"('0xAA'), "java.lang.Integer.decode"('0xAA')) FROM alpha_source LIMIT 1 ; -- 170
+
+                    --
+                    -- Bit OR - pass
+                    SELECT BITOR("java.lang.Integer.decode"('0xFF'), "java.lang.Integer.decode"('0xAA')) FROM alpha_source LIMIT 1 ; -- 255
+                    SELECT BITOR("java.lang.Integer.decode"('0x41'), "java.lang.Integer.decode"('0xAA')) FROM alpha_source LIMIT 1 ; -- 235
+                    SELECT BITOR("java.lang.Integer.decode"('0xAA'), "java.lang.Integer.decode"('0xAA')) FROM alpha_source LIMIT 1 ; -- 170
+
+                    --
+                    -- Bit OR - pass
+                    SELECT BITXOR("java.lang.Integer.decode"('0xFF'), "java.lang.Integer.decode"('0xAA')) FROM alpha_source LIMIT 1 ; --  85
+                    SELECT BITXOR("java.lang.Integer.decode"('0x41'), "java.lang.Integer.decode"('0xAA')) FROM alpha_source LIMIT 1 ; -- 235
+                    SELECT BITXOR("java.lang.Integer.decode"('0xAA'), "java.lang.Integer.decode"('0xAA')) FROM alpha_source LIMIT 1 ; --   0
+
+                    --
+                    -- Sampling based on id - FAIL 
+                    SELECT id FROM alpha_source WHERE BITAND(id, 15) = 0  ; --  3 rows FAIL
+                    SELECT id FROM alpha_source WHERE BITAND(id,  7) = 0  ; --  6 rows FAIL
+                    SELECT id FROM alpha_source WHERE BITAND(id,  3) = 0  ; -- 12 rows FAIL
+
+                    --
+                    -- Sampling based on id (zero base fix) - pass
+                    SELECT (id + 1) FROM alpha_source WHERE BITAND((id + 1), 15) = 0  ; --  2 rows pass
+                    SELECT (id + 1) FROM alpha_source WHERE BITAND((id + 1),  7) = 0  ; --  5 rows pass
+                    SELECT (id + 1) FROM alpha_source WHERE BITAND((id + 1),  3) = 0  ; -- 11 rows pass
+
+                        -- 16
+                        -- 32
+
+                        --  8
+                        -- 16
+                        -- 24
+                        -- 32
+                        -- 40
+
+                        --  4
+                        --  8
+                        -- 12
+                        -- 16
+                        -- 20
+                        -- 24
+                        -- 28
+                        -- 32
+                        -- 36
+                        -- 40
+                        -- 44
 
                     --
                     -- Sampling based on id - FAIL
-                    -- SELECT id FROM alpha_source WHERE (id & 0x0F)  = 0  ;
-                    -- SELECT id FROM alpha_source WHERE (id & x'0F') = 0  ;
-                    -- SELECT id FROM alpha_source WHERE (id & 16)    = 0  ;
-                    -- SELECT id FROM alpha_source WHERE (id < 16) ;
+                    SELECT id FROM alpha_source WHERE BITAND(id, "java.lang.Integer.decode"('0x0F')) = 0  ; --  3 rows FAIL
+                    SELECT id FROM alpha_source WHERE BITAND(id, "java.lang.Integer.decode"('0x07')) = 0  ; --  6 rows FAIL
+                    SELECT id FROM alpha_source WHERE BITAND(id, "java.lang.Integer.decode"('0x03')) = 0  ; -- 12 rows FAIL
+
+                    --
+                    -- Sampling based on id (zero base fix) - pass
+                    SELECT (id + 1) FROM alpha_source WHERE BITAND((id + 1), "java.lang.Integer.decode"('0x0F')) = 0  ; --  2 rows pass
+                    SELECT (id + 1) FROM alpha_source WHERE BITAND((id + 1), "java.lang.Integer.decode"('0x07')) = 0  ; --  5 rows pass
+                    SELECT (id + 1) FROM alpha_source WHERE BITAND((id + 1), "java.lang.Integer.decode"('0x03')) = 0  ; -- 11 rows pass
+
+                        -- 16
+                        -- 32
+
+                        --  8
+                        -- 16
+                        -- 24
+                        -- 32
+                        -- 40
+
+                        --  4
+                        --  8
+                        -- 12
+                        -- 16
+                        -- 20
+                        -- 24
+                        -- 28
+                        -- 32
+                        -- 36
+                        -- 40
+                        -- 44
 
             \q
 
@@ -682,8 +932,9 @@ waitlog()
         pushd docker
 
             datadir=$(mktemp -d)
-            cp "oracle/oracle-xe/11.2/sql/alpha-source.sql" "${datadir}/001.sql"
-            cp "data/alpha-source-data.sql"  "${datadir}/002.sql"
+            cp "oracle/oracle-xe/11.2/sql/alpha-source.sql"  "${datadir}/01-alpha.sql"
+            cp "data/alpha-source-data.sql"                  "${datadir}/02-data.sql"
+            cp "oracle/oracle-xe/11.2/sql/bit-functions.sql" "${datadir}/03-bits.sql"
 
             docker run \
                 --detach \
@@ -703,20 +954,20 @@ waitlog()
                 'albert' \
                 sqlplus
 
-                    # Enter user-name: system
-                    # Enter password: oracle
+                    -- Enter user-name: system
+                    -- Enter password: oracle
 
-                    # Connected to:
-                    # Oracle Database 11g Express Edition Release 11.2.0.2.0 - 64bit Production
-                    # SQL> 
+                    -- Connected to:
+                    -- Oracle Database 11g Express Edition Release 11.2.0.2.0 - 64bit Production
+                    -- SQL> 
 
-                    START /database.init/001.sql
+                    START /database.init/01-alpha.sql
 
                         Table created.
                         Sequence created.
                         Trigger created.
 
-                    START /database.init/002.sql
+                    START /database.init/02-data.sql
 
                         1 row created.
                         1 row created.
@@ -724,9 +975,9 @@ waitlog()
                         ....
                         1 row created.
 
-                    #
-                    # Pagination using ROWNUM.
-                    # http://www.oracle.com/technetwork/issue-archive/2006/06-sep/o56asktom-086197.html
+                    --
+                    -- Pagination using ROWNUM.
+                    -- http://www.oracle.com/technetwork/issue-archive/2006/06-sep/o56asktom-086197.html
                     SELECT
                         id, ra, decl
                     FROM
@@ -739,16 +990,77 @@ waitlog()
                     WHERE rn > 10 AND rn <= 20
                     ;
 
-                    #
-                    # Hexadecimal Constants in Oracle
-                    # http://www.sqlines.com/oracle/hex_constants
+                    --
+                    -- Hexadecimal Constants in Oracle
+                    -- http://stackoverflow.com/a/1227073
+                    -- http://www.sqlines.com/oracle/hex_constants
                     SELECT TO_NUMBER('FF', 'xx') FROM alpha_source WHERE id = 1 ;
                     SELECT TO_NUMBER('41', 'xx') FROM alpha_source WHERE id = 1 ;
                     SELECT TO_NUMBER('AA', 'xx') FROM alpha_source WHERE id = 1 ;
 
+                    --
+                    -- Number of 'x''s must be >= number of digits.
+                    -- SELECT TO_NUMBER('AA', 'x') FROM alpha_source WHERE id = 1 ; -- [ORA-01722: invalid number]
+                    SELECT TO_NUMBER('AA', 'xx') FROM alpha_source WHERE id = 1 ;
+                    SELECT TO_NUMBER('AA', 'xxx') FROM alpha_source WHERE id = 1 ;
+                    SELECT TO_NUMBER('AA', 'xxxx') FROM alpha_source WHERE id = 1 ;
 
+--
+-- User defined functions.
+-- https://community.oracle.com/thread/498773
 
+                    START /database.init/03-bits.sql
 
+                    --
+                    -- Bit NOT - pass (signed int)
+                    SELECT BITNOT(TO_NUMBER('FF', 'xxxx')) FROM alpha_source WHERE id = 1 ; -- -256
+                    SELECT BITNOT(TO_NUMBER('41', 'xxxx')) FROM alpha_source WHERE id = 1 ; --  -66
+                    SELECT BITNOT(TO_NUMBER('AA', 'xxxx')) FROM alpha_source WHERE id = 1 ; -- -171
+
+                    --
+                    -- Bit AND - pass
+                    SELECT BITAND(TO_NUMBER('FF', 'xxxx'), TO_NUMBER('AA', 'xxxx')) FROM alpha_source WHERE id = 1 ; -- 170
+                    SELECT BITAND(TO_NUMBER('41', 'xxxx'), TO_NUMBER('AA', 'xxxx')) FROM alpha_source WHERE id = 1 ; --   0
+                    SELECT BITAND(TO_NUMBER('AA', 'xxxx'), TO_NUMBER('AA', 'xxxx')) FROM alpha_source WHERE id = 1 ; -- 170
+
+                    --
+                    -- Bit OR - pass
+                    SELECT BITOR(TO_NUMBER('FF', 'xxxx'), TO_NUMBER('AA', 'xxxx')) FROM alpha_source WHERE id = 1 ; -- 255
+                    SELECT BITOR(TO_NUMBER('41', 'xxxx'), TO_NUMBER('AA', 'xxxx')) FROM alpha_source WHERE id = 1 ; -- 235
+                    SELECT BITOR(TO_NUMBER('AA', 'xxxx'), TO_NUMBER('AA', 'xxxx')) FROM alpha_source WHERE id = 1 ; -- 170
+
+                    --
+                    -- Bit XOR - pass
+                    SELECT BITXOR(TO_NUMBER('FF', 'xxxx'), TO_NUMBER('AA', 'xxxx')) FROM alpha_source WHERE id = 1 ; --  85
+                    SELECT BITXOR(TO_NUMBER('41', 'xxxx'), TO_NUMBER('AA', 'xxxx')) FROM alpha_source WHERE id = 1 ; -- 235
+                    SELECT BITXOR(TO_NUMBER('AA', 'xxxx'), TO_NUMBER('AA', 'xxxx')) FROM alpha_source WHERE id = 1 ; --   0
+
+                    --
+                    -- Sampling based on id - pass
+                    SELECT id FROM alpha_source WHERE BITAND(id, TO_NUMBER('0F', 'xxxx')) = 0  ;
+                    SELECT id FROM alpha_source WHERE BITAND(id, TO_NUMBER('07', 'xxxx')) = 0  ;
+                    SELECT id FROM alpha_source WHERE BITAND(id, TO_NUMBER('03', 'xxxx')) = 0  ;
+
+                        -- 16
+                        -- 32
+
+                        --  8
+                        -- 16
+                        -- 24
+                        -- 32
+                        -- 40
+
+                        --  4
+                        --  8
+                        -- 12
+                        -- 16
+                        -- 20
+                        -- 24
+                        -- 28
+                        -- 32
+                        -- 36
+                        -- 40
+                        -- 44
 
                 quit
 
