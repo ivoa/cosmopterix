@@ -1,4 +1,4 @@
-This container is based on the Cosmopterix [Java](../java/8) base container.
+This container is based on the [Cosmopterix Java](../java/8) base container.
 The container build script downloads and installs version 10.12.1.1 of the [Apache Derby](https://db.apache.org/derby/)
 database from the Apache website.
 
