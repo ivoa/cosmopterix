@@ -20,7 +20,7 @@ Work in progress for :
 * [SQLite](docker/sqlite)
 
 Plans for :
-* [SQLServer](docker/sqlserver)
+* [SQLServer](docker/mssql)
 * [Firebird](docker/firebird)
 * [Sybase](docker/sybase)
 * [DB2](docker/db2)
