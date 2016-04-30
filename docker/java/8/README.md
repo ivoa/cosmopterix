@@ -1,4 +1,4 @@
-This container is based on the Cosmopterix [Fedora](../fedora/23) base container, and uses the OS package manager to install
+This container is based on the [Cosmopterix Fedora 23](../fedora/23) base container, and uses the OS package manager to install
 version 1.8.0 of the [OpenJDK](http://openjdk.java.net/) Java Runtime Environment.
 
 ````
