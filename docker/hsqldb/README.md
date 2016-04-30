@@ -1,4 +1,4 @@
-This container is based on the Cosmopterix [Java](../java/8) base container.
+This container is based on the [Cosmopterix Java 8](../java/8) base container.
 The container build script downloads and installs version 2.3.3 of the [HyperSQL](http://hsqldb.org/)
 database from the Apache website.
 
