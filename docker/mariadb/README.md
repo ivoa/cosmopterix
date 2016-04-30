@@ -1,4 +1,4 @@
-This container is based on the Cosmopterix [Fedora](../fedora/23) base container, and uses the OS package manager to install
+This container is based on the [Cosmopterix Fedora 23](../fedora/23) base container, and uses the OS package manager to install
 version 10.0.23 of the [MariaDB](https://mariadb.org/) database server and client.
 
 Running the container with no arguments will create a new database, with random database name, user name and password.
