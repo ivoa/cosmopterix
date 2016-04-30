@@ -18,7 +18,7 @@ Working containers for :
 * [HyperSQL](docker/hsqldb)
 
 Work in progress for :
-* [Oracle Xe](docker/oracle) (requires external download)
+* [Oracle Xe](docker/oracle/oracle-xe/11.2) (requires external download)
 * [SQLite](docker/sqlite)
 
 Plans for :
