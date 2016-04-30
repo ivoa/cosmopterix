@@ -1,4 +1,4 @@
-This container is based on the Cosmopterix [Fedora](../fedora/23) base container, and uses the OS package manager to install
+This container is based on the [Cosmopterix Fedora 23](../fedora/23) base container, and uses the OS package manager to install
 version 5.6.29 of the [MySQL](https://www.mysql.com/) database server and client.
 
 Running the container with no arguments will create a new database, with random database name, user name and password.
