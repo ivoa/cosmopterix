@@ -3,9 +3,7 @@ Named after the <a href='http://ukmoths.org.uk/systematic-list/#Cosmopteriginae'
 
 A set of Docker containers for each of the main database platforms used in the IVOA to provide a common interface for creating and configuring test databases.
 
-The aim is to create a framework that makes it easy to experiment with SQL queries across all of the database platforms to see how they handle different query constructs. 
-
-The test framework enables us to verify that any proposed changes to the ADQL grammar and syntax are in fact implementable on all of the target platforms. 
+The test framework makes it easy to run the same set of SQL queries across all of the database platforms to see how they handle different query constructs. Enabling us to verify that it will be possible to implement proposed changes to the ADQL grammar and syntax on all of the target platforms. 
 
 Cross platform SQL tests :
 * [OFFSET and LIMIT](../../wiki/OFFSET-and-LIMIT)
