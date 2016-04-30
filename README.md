@@ -20,8 +20,8 @@ Work in progress for :
 * [SQLite](docker/sqlite)
 
 Plans for :
-* [Firebird](docker/firebird)
 * [SQLServer](docker/sqlserver)
+* [Firebird](docker/firebird)
 * [Sybase](docker/sybase)
 * [DB2](docker/db2)
 * [Qserv](https://dev.lsstcorp.org/trac/wiki/db/Qserv)
