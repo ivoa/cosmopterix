@@ -1289,6 +1289,12 @@ EOF
             SELECT ~ CAST(0xAA AS INT) ; -- -171
 
             --
+            -- Bit AND - FAIL
+            -- SELECT 0xFF & 0xAA ; -- The data types varbinary and varbinary are incompatible in the '&' operator.
+            -- SELECT 0x41 & 0xAA ; -- The data types varbinary and varbinary are incompatible in the '&' operator.
+            -- SELECT 0xAA & 0xAA ; -- The data types varbinary and varbinary are incompatible in the '&' operator.
+
+            --
             -- Bit AND (with CAST) - pass
             SELECT CAST(0xFF AS INT) & CAST(0xAA AS INT) ; -- 170
             SELECT CAST(0x41 AS INT) & CAST(0xAA AS INT) ; --   0
@@ -1307,10 +1313,19 @@ EOF
             SELECT CAST(0xAA AS INT) ^ CAST(0xAA AS INT) ; --   0
 
             --
+            -- Sampling based on id - pass
+            -- This works, but not 100% sure why - fragile.
+            SELECT id FROM alpha_source WHERE (id & 0x0F) = 0  ; --  2 rows
+            SELECT id FROM alpha_source WHERE (id & 0x07) = 0  ; --  5 rows
+            SELECT id FROM alpha_source WHERE (id & 0x03) = 0  ; -- 11 rows
+
+            --
             -- Sampling based on id (with CAST) - pass
             SELECT id FROM alpha_source WHERE (id & CAST(0x0F AS INT)) = 0  ; --  2 rows
             SELECT id FROM alpha_source WHERE (id & CAST(0x07 AS INT)) = 0  ; --  5 rows
             SELECT id FROM alpha_source WHERE (id & CAST(0x03 AS INT)) = 0  ; -- 11 rows
+
+
 
             -- 16
             -- 32
