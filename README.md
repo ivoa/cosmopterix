@@ -1,9 +1,9 @@
 # cosmopterix
 Named after the <a href='http://ukmoths.org.uk/systematic-list/#Cosmopteriginae'>Cosmopteriginae</a> family of moths.
 
-A set of Docker containers for each of the main database platforms used in the IVOA to provide a common interface for creating and configuring test databases.
+A set of Docker containers for each of the main database platforms providing a common framework for creating and configuring test databases.
 
-The test framework makes it easy to run the same set of SQL queries across all of the database platforms to see how they handle different query constructs. Enabling us to verify that it will be possible to implement proposed changes to the ADQL grammar and syntax on all of the target platforms. 
+The framework makes it easy to compare the same set of SQL queries across all of the database platforms to see how they handle different query constructs, enabling us to test if proposed changes to the ADQL language will be implemetable on all of the target platforms.
 
 Cross platform SQL tests :
 * [OFFSET and LIMIT](../../wiki/OFFSET-and-LIMIT)
