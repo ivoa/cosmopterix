@@ -73,6 +73,10 @@ waitlog()
                     -- SELECT 0x41 ; -- 0
                     -- SELECT 0xAA ; -- 0
 
+                    -- Numeric literal plus - ???
+
+                    -- String literal - ???
+
                     --
                     -- String literal plus - FAIL
                     -- Type missmatch between string and int.
