@@ -1,0 +1,208 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+
+# -------------------------------------------------------------------------------------------
+# Download our Oracle RPM file.
+#[user@desktop]
+
+    #
+    # Download the zipfile from Oracle.
+    # http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html
+
+    version=11.2.0-1.0
+    rpmfile=oracle-xe-${version}.x86_64.rpm
+    zipfile=${rpmfile}.zip
+    tarfile=${rpmfile}.tar.gz
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        if [ ! -e 'binaries/oracle' ]
+        then
+            mkdir -p 'binaries/oracle'
+        fi
+
+        pushd binaries
+            pushd oracle
+                if [ ! -e "${tarfile}" ]
+                then
+                    if [ ! -e "${rpmfile}" ]
+                    then
+                        if [ -e "${zipfile}" ]
+                        then
+                            unzip -j "${zipfile}" '*.rpm'
+                        fi
+                    fi
+                    if [ -e "${rpmfile}" ]
+                    then
+                        tar -cvzf "${tarfile}" \
+                            "${rpmfile}"
+                    fi
+                fi
+            popd
+        popd
+
+        if [ ! -e "binaries/oracle/${tarfile}" ]
+        then
+            echo ""
+            echo "-------- --------"
+            echo "Please download the Oracle-Xe (eXpress Edition) zipfile"
+            echo "Source [http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html]"
+            echo "Target [$(pwd)]"
+            echo "-------- --------"
+            echo ""
+        fi
+
+        pushd docker
+            pushd oracle/oracle-xe/11.2
+                if [ ! -d 'rpm' ]
+                then
+                    mkdir 'rpm'
+                fi
+                pushd rpm
+                    if [ ! -e "${tarfile}" ]
+                    then
+                        ln "${COSMOPTERIX_CODE:?}/binaries/oracle/${tarfile}" "${tarfile}"
+                    fi
+                popd
+            popd
+        popd
+    popd
+
+# -----------------------------------------------------
+# Build our Oracle containers.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            docker build \
+                --tag "cosmopterix/oracle-linux:7.2-1.0" \
+                oracle/oracle-linux/7.2
+            
+            docker build \
+                --tag "cosmopterix/oracle-xe:11.2-1.0" \
+                oracle/oracle-xe/11.2
+    
+        popd
+    popd
+
+    #
+    # From MadHead (https://github.com/madhead/docker-oracle-xe)
+    # During the configuration of Oracle XE instance two files - init.ora and initXETemp.ora -
+    # are overridden with ones from config directory of this repo.
+    # The only difference is that memory_target parameter is commented in them to prevent
+    # ORA-00845: MEMORY_TARGET not supported on this system error.
+    # The only piece of magic in this image :).
+    #
+
+    #
+    # TODO - Move the create database step from the build time to run time.
+    # TODO - Move the database files in a volume.
+    # TODO - Configure database using config scripts.
+
+# -------------------------------------------------------------------------------------------
+# Run our Oracle container.
+#[user@desktop]
+
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            datadir=$(mktemp -d)
+            cp "oracle/oracle-xe/11.2/sql/alpha-source.sql"  "${datadir}/01-alpha.sql"
+            cp "data/alpha-source-data.sql"                  "${datadir}/02-data.sql"
+            cp "oracle/oracle-xe/11.2/sql/bit-functions.sql" "${datadir}/03-bits.sql"
+
+            docker run \
+                --detach \
+                --name 'albert' \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/oracle-xe:11.2-1.0"
+
+            docker logs -f 'albert'
+
+                Thu Apr 28 10:52:43 UTC 2016
+                Starting Oracle Net Listener.
+                Starting Oracle Database 11g Express Edition instance.
+
+            docker exec \
+                --tty \
+                --interactive \
+                'albert' \
+                sqlplus
+
+                    -- Enter user-name: system
+                    -- Enter password: oracle
+
+                    -- Connected to:
+                    -- Oracle Database 11g Express Edition Release 11.2.0.2.0 - 64bit Production
+                    -- SQL> 
+
+                    START /database.init/01-alpha.sql
+
+                        Table created.
+                        Sequence created.
+                        Trigger created.
+
+                    START /database.init/02-data.sql
+
+                        1 row created.
+                        1 row created.
+                        ....
+                        ....
+                        1 row created.
+
+                    --
+                    -- Pagination using ROWNUM.
+                    -- http://www.oracle.com/technetwork/issue-archive/2006/06-sep/o56asktom-086197.html
+                    SELECT
+                        id, ra, decl
+                    FROM
+                        (
+                        SELECT
+                            id, ra, decl, ROWNUM as rn
+                        FROM
+                            alpha_source
+                        )
+                    WHERE rn > 10 AND rn <= 20
+                    ;
+
+                    --
+
+                quit
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    docker rm --volumes $(docker stop 'albert')
+
+

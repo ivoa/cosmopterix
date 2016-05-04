@@ -1,0 +1,313 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+    #
+    # When Microsoft release SQLServer for Linux we will try to containerize it.
+    # In the mean time, this uses the Firethorn containers to access a SQLServer database at ROE.
+    #
+
+
+# -----------------------------------------------------
+# Create our secret function.
+#[user@desktop]
+
+    secrethost='dave@shepseskaf.roe.ac.uk'
+    secretfile='${HOME:?}/secret.store'
+
+    secret()
+        {
+        local key=${1:?}
+        ssh -o 'VisualHostKey=no' "${secrethost:?}" "sed -n 's/^${key}=\\(.*\\)/\\1/p' \"${secretfile:?}\"" 
+        }
+
+    secret 'ping'
+
+# -----------------------------------------------------
+# Create our sqsh config.
+#[user@desktop]
+
+    sqshconf=$(mktemp)
+    cat > "${sqshconf}" << EOF
+
+    sqlname=nastja
+    sqllink=nerijus
+
+    sqlhost=$(secret 'sqlserver.admin.host')
+    sqlpath=$(secret 'sqlserver.admin.path')
+
+    sqldata=$(secret 'sqlserver.admin.data')
+    sqluser=$(secret 'sqlserver.admin.user')
+    sqlpass=$(secret 'sqlserver.admin.pass')
+
+    tunneluser=$(secret 'ssh.tunnel.user')
+    tunnelhost=$(secret 'ssh.tunnel.host')
+
+EOF
+
+# -------------------------------------------------------------------------------------------
+# Build our Docker images.
+#[user@desktop]
+
+    source "${HOME:?}/firethorn.settings"
+    pushd "${FIRETHORN_CODE:?}"
+
+        docker build \
+            --tag firethorn/sql-tunnel:1.1 \
+            docker/sql-tunnel
+            
+        docker build \
+            --tag firethorn/sqsh:1.1 \
+            firethorn-sqlserver/src
+
+    popd
+
+# -----------------------------------------------------
+# Start our SQLServer tunnel.
+#[user@desktop]
+
+    source "${sqshconf}"
+
+    docker run \
+        --detach \
+        --interactive \
+        --name "${sqlname:?}" \
+        --env  "tunneluser=${tunneluser:?}" \
+        --env  "tunnelhost=${tunnelhost:?}" \
+        --env  "targethost=${sqlhost:?}" \
+        --volume "${SSH_AUTH_SOCK}:/tmp/ssh_auth_sock" \
+        firethorn/sql-tunnel:1.1
+
+# -----------------------------------------------------
+# Create our database config.
+#[user@desktop]
+
+    dataconf=$(mktemp)
+    cat > "${dataconf}" << EOF
+databasename=adql$(date '+%Y%m%d%H%M%S')test
+databaseuser=adqltester
+databasepass=$(pwgen 10 1)
+EOF
+
+# -----------------------------------------------------
+# Run our sqlsh container.
+#[user@desktop]
+
+    source "${sqshconf}"
+    source "${HOME:?}/firethorn.settings"
+    source "${HOME:?}/cosmopterix.settings"
+    
+    datadir=$(mktemp -d)
+    cp "${COSMOPTERIX_CODE:?}/docker/mssql/sql/alpha-source.sql"  "${datadir}/01-alpha.sql"
+    cp "${COSMOPTERIX_CODE:?}/docker/mssql/sql/alpha-source.sql"  "${datadir}/01-beta.sql"
+    cp "${COSMOPTERIX_CODE:?}/docker/data/alpha-source-data.sql"  "${datadir}/02-data.sql"
+    
+    docker run \
+        --rm -it \
+        --link "${sqlname:?}:${sqllink:?}" \
+        --volume "${sqshconf}":/sqsh.conf \
+        --volume "${dataconf}":/data.conf \
+        --volume "${datadir}:/database.init/" \
+        firethorn/sqsh:1.1 \
+        bash
+
+        #
+        # Load our configuration properties
+        source "/sqsh.conf"
+        source "/data.conf"
+
+        #
+        # Create our database and user account.
+        sqsh \
+            -S "${sqllink:?}" \
+            -U "${sqluser:?}" \
+            -P "${sqlpass:?}" \
+            << EOF
+
+            USE [master]
+            CREATE DATABASE [${databasename}] ON  PRIMARY 
+                (
+                NAME = N'${databasename}',
+                FILENAME = N'${sqlpath}\\${databasename}.mdf',
+                SIZE = 3072KB ,
+                FILEGROWTH = 1024KB
+                )
+            LOG ON 
+                (
+                NAME = N'${databasename}_log',
+                FILENAME = N'${sqlpath}\\${databasename}_log.ldf',
+                SIZE = 4096KB,
+                FILEGROWTH = 10%
+                )
+            go
+
+            USE [master]
+            CREATE LOGIN [${databaseuser}] WITH PASSWORD = '${databasepass}'
+            go
+
+            USE [${databasename}]
+            CREATE USER [${databaseuser}] FOR LOGIN [${databaseuser}]
+            go
+
+            USE [${databasename}]
+            GRANT CREATE TABLE ON DATABASE::[${databasename}] TO [${databaseuser}]
+            GRANT REFERENCES ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT EXECUTE    ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT ALTER      ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT INSERT     ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT SELECT     ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT UPDATE     ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT DELETE     ON SCHEMA::[dbo] TO [${databaseuser}]
+            go
+
+EOF
+
+        #
+        # Run our tests.
+        sqsh \
+            -S "${sqllink:?}" \
+            -U "${sqluser:?}" \
+            -P "${sqlpass:?}" \
+            -D "${databasename:?}"
+
+            \loop /database.init/01-alpha.sql
+            go
+
+            \loop /database.init/02-data.sql
+            go
+
+            SELECT @@version ;
+
+	        -- Microsoft SQL Server 2012 (SP1) - 11.0.3000.0 (X64) 
+	        -- Oct 19 2012 13:38:57 
+	        -- Copyright (c) Microsoft Corporation
+	        -- Enterprise Edition (64-bit) on Windows NT 6.0 <X64> (Build 6002: Service Pack 2)
+
+            --
+            -- Hexadecimal literals.
+            -- https://msdn.microsoft.com/en-GB/library/ms179899.aspx
+            -- "Binary constants have the prefix 0x and are a string of hexadecimal numbers."
+            -- "They are not enclosed in quotation marks."
+
+            --
+            -- Numeric literal - FAIL
+            -- SELECT 0xFF ; -- 0xff (type is varbinary)
+            -- SELECT 0x41 ; -- 0x41 (type is varbinary)
+            -- SELECT 0xAA ; -- 0xaa (type is varbinary)
+
+            --
+            -- Numeric literal with CAST - pass
+            SELECT CAST(0xFF AS INT) ; -- 255
+            SELECT CAST(0x41 AS INT) ; -- 65
+            SELECT CAST(0xAA AS INT) ; -- 170
+
+            --
+            -- String literal - FAIL
+            -- SELECT x'FF' ; -- Invalid column name 'x'.
+            -- SELECT x'41' ; -- Invalid column name 'x'.
+            -- SELECT x'AA' ; -- Invalid column name 'x'.
+            
+            --
+            -- Bitwise operators.
+            -- https://msdn.microsoft.com/en-us/library/ms176122.aspx
+
+            --
+            -- Bit NOT - FAIL
+            SELECT ~ 0xFF ; -- Operand data type varbinary is invalid for '~' operator.
+            SELECT ~ 0x41 ; -- Operand data type varbinary is invalid for '~' operator.
+            SELECT ~ 0xAA ; -- Operand data type varbinary is invalid for '~' operator.
+
+            --
+            -- Bit NOT (with CAST) - pass
+            SELECT ~ CAST(0xFF AS INT) ; -- -256
+            SELECT ~ CAST(0x41 AS INT) ; --  -66
+            SELECT ~ CAST(0xAA AS INT) ; -- -171
+
+            --
+            -- Bit AND - FAIL
+            -- SELECT 0xFF & 0xAA ; -- The data types varbinary and varbinary are incompatible in the '&' operator.
+            -- SELECT 0x41 & 0xAA ; -- The data types varbinary and varbinary are incompatible in the '&' operator.
+            -- SELECT 0xAA & 0xAA ; -- The data types varbinary and varbinary are incompatible in the '&' operator.
+
+            --
+            -- Bit AND (with CAST) - pass
+            SELECT CAST(0xFF AS INT) & CAST(0xAA AS INT) ; -- 170
+            SELECT CAST(0x41 AS INT) & CAST(0xAA AS INT) ; --   0
+            SELECT CAST(0xAA AS INT) & CAST(0xAA AS INT) ; -- 170
+
+            --
+            -- Bit OR (with CAST) - pass
+            SELECT CAST(0xFF AS INT) | CAST(0xAA AS INT) ; -- 255
+            SELECT CAST(0x41 AS INT) | CAST(0xAA AS INT) ; -- 235
+            SELECT CAST(0xAA AS INT) | CAST(0xAA AS INT) ; -- 170
+
+            --
+            -- Bit XOR (with CAST) - pass
+            SELECT CAST(0xFF AS INT) ^ CAST(0xAA AS INT) ; --  85
+            SELECT CAST(0x41 AS INT) ^ CAST(0xAA AS INT) ; -- 235
+            SELECT CAST(0xAA AS INT) ^ CAST(0xAA AS INT) ; --   0
+
+            --
+            -- Sampling based on id - pass
+            -- This works, but not 100% sure why - fragile.
+            SELECT id FROM alpha_source WHERE (id & 0x0F) = 0  ; --  2 rows
+            SELECT id FROM alpha_source WHERE (id & 0x07) = 0  ; --  5 rows
+            SELECT id FROM alpha_source WHERE (id & 0x03) = 0  ; -- 11 rows
+
+            --
+            -- Sampling based on id (with CAST) - pass
+            SELECT id FROM alpha_source WHERE (id & CAST(0x0F AS INT)) = 0  ; --  2 rows
+            SELECT id FROM alpha_source WHERE (id & CAST(0x07 AS INT)) = 0  ; --  5 rows
+            SELECT id FROM alpha_source WHERE (id & CAST(0x03 AS INT)) = 0  ; -- 11 rows
+
+
+
+            -- 16
+            -- 32
+
+            --  8
+            -- 16
+            -- 24
+            -- 32
+            -- 40
+
+            --  4
+            --  8
+            -- 12
+            -- 16
+            -- 20
+            -- 24
+            -- 28
+            -- 32
+            -- 36
+            -- 40
+            -- 44
+
+        exit
+    exit
+
+# -------------------------------------------------------------------------------------------
+# Remove the containers
+#[user@desktop]
+
+    docker rm --volumes $(docker stop "${sqlname:?}")
+
+
