@@ -20,7 +20,7 @@ MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 
 #
 # PostgreSQL version
-ENV pgsqlversion=9.4.7
+ENV pgsqlversion=9.4.8
 
 #
 # Default port number.

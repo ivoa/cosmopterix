@@ -1,0 +1,390 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -----------------------------------------------------
+# Create our local settings.
+#[user@desktop]
+
+    if [ ! -e "${HOME:?}/cosmopterix.settings" ]
+    then
+        cat > "${HOME:?}/cosmopterix.settings" << EOF
+COSMOPTERIX_HOME=/var/local/projects/edinburgh/cosmopterix
+COSMOPTERIX_CODE=\${COSMOPTERIX_HOME:?}/github
+EOF
+    fi
+    
+# -----------------------------------------------------
+# Remove existing containers and images.
+#[user@desktop]
+
+    docker rm -v $(docker stop $(docker ps -aq))
+
+    docker rmi -f $(docker images -q)
+
+# -----------------------------------------------------
+# Build our container images.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            docker build \
+                --tag "cosmopterix/fedora:23-1.0" \
+                --tag "cosmopterix/fedora:latest" \
+                fedora/23
+
+            docker build \
+                --tag "cosmopterix/pgsql:9.4-1.0" \
+                --tag "cosmopterix/pgsql:latest" \
+                pgsql
+
+            docker build \
+                --tag "cosmopterix/mysql:5.6-1.0" \
+                --tag "cosmopterix/mysql:latest" \
+                mysql
+
+            docker build \
+                --tag "cosmopterix/mariadb:10.0-1.0" \
+                --tag "cosmopterix/mariadb:latest" \
+                mariadb
+
+            docker build \
+                --tag "cosmopterix/java:8-1.0" \
+                --tag "cosmopterix/java:latest" \
+                java/8
+
+            docker build \
+                --tag "cosmopterix/derby:10.12-1.0" \
+                --tag "cosmopterix/derby:latest" \
+                derby
+
+            docker build \
+                --tag "cosmopterix/hsqldb:2.3-1.0" \
+                --tag "cosmopterix/hsqldb:latest" \
+                hsqldb
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Create our 'waitlog' function.
+#[user@desktop]
+
+waitlog()
+    {
+    local name=${1:?Name required}
+    local text=${2:?Text required}
+    sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
+    }
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    dockname=pgsql
+
+    docker rm --volumes $(docker stop "${dockname:?}")
+
+# -------------------------------------------------------------------------------------------
+# Test our PostgreSQL container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "pgsql/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name "${dockname:?}" \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/pgsql:9.4-1.0"
+
+            waitlog "${dockname:?}" '^Init'
+
+            docker exec \
+                --tty \
+                --interactive \
+                "${dockname:?}" \
+                pgsql-client
+
+                \pset pager off
+
+                SELECT id, ra, decl FROM alpha_source ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+
+                --
+
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+
+                -- PostgreSQL :
+                --  [ORDER BY sort_column] is separate
+                --  [LIMIT row_count] is separate
+                --  [OFFSET row_offset] is separate
+
+            \q
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    dockname=mysql
+
+    docker rm --volumes $(docker stop "${dockname:?}")
+
+# -------------------------------------------------------------------------------------------
+# Test our MySQL container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "mysql/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name "${dockname:?}" \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/mysql:5.6-1.0"
+
+            waitlog "${dockname:?}" '^Init'
+
+            docker exec \
+                --tty \
+                --interactive \
+                "${dockname:?}" \
+                mysql-client
+
+                -- MySQL :
+                --  [ORDER BY <sort_column>] is separate
+                --  [LIMIT <row_count>] is separate
+                --  [OFFSET <row_offset>] requires [LIMIT <row_count>]
+
+                SELECT id, ra, decl FROM alpha_source ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10,10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 4294967295 OFFSET 10 ;
+
+                --
+
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 4294967295 OFFSET 10 ;
+
+                -- SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT 10,10 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT  0 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT -1 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT  0 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT -1 OFFSET 10 ;
+
+            \q
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    dockname=maria
+
+    docker rm --volumes $(docker stop "${dockname:?}")
+        
+# -------------------------------------------------------------------------------------------
+# Test our MariaDB container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "mariadb/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql"   "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name "${dockname:?}" \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/mariadb:10.0-1.0"
+
+            waitlog "${dockname:?}" '^Init'
+
+            docker exec \
+                --tty \
+                --interactive \
+                "${dockname:?}" \
+                mysql-client
+
+                -- MariaDB :
+                --  [ORDER BY <sort_column>] is separate
+                --  [LIMIT <row_count>] is separate
+                --  [OFFSET <row_offset>] requires [LIMIT <row_count>]
+
+                SELECT id, ra, decl FROM alpha_source ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10,10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 4294967295 OFFSET 10 ;
+
+                --
+
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 4294967295 OFFSET 10 ;
+
+                -- SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT 10,10 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT  0 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT -1 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT  0 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT -1 OFFSET 10 ;
+
+            \q
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    dockname=derby
+
+    docker rm --volumes $(docker stop "${dockname:?}")
+
+# -------------------------------------------------------------------------------------------
+# Test our Derby container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "derby/sql/alpha-source.sql" "${datadir}/01-alpha.sql"
+            cp "data/alpha-source-data.sql" "${datadir}/02-data.sql"
+
+            docker run \
+                --detach \
+                --name "${dockname:?}" \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/derby:10.12-1.0"
+
+            waitlog "${dockname:?}" '^Init'
+
+            sleep 10
+
+            docker exec \
+                --tty \
+                --interactive \
+                "${dockname:?}" \
+                derby-client
+
+                --
+                --
+                --
+                
+            quit;
+
+        popd
+    popd
+
+
+# -------------------------------------------------------------------------------------------
+# Remove the container
+#[user@desktop]
+
+    dockname=hsqldb
+
+    docker rm --volumes $(docker stop "${dockname:?}")
+
+# -------------------------------------------------------------------------------------------
+# Test our HyperSQL container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "hsqldb/sql/alpha-source.sql" "${datadir}/01-alpha.sql"
+            cp "data/alpha-source-data.sql"  "${datadir}/02-data.sql"
+
+            docker run \
+                --detach \
+                --name "${dockname:?}" \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/hsqldb:2.3-1.0"
+
+            waitlog "${dockname:?}" '^Init'
+
+            sleep 10
+
+            docker exec \
+                --tty \
+                --interactive \
+                "${dockname:?}" \
+                hsqldb-client
+
+                    --
+                    --
+                    --
+
+            \q
+
+        popd
+    popd
+
+
+

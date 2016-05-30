@@ -20,7 +20,7 @@ MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 
 #
 # MySQL version
-ENV mysqlversion 5.6.29
+ENV mysqlversion 5.6.30
 
 #
 # Default port number.
