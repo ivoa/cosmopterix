@@ -196,7 +196,6 @@ and then login and run our tests.
         --detach \
         --name 'albert' \
         --volume "${tempdir}:/database.init/" \
-        --volume "${tempcfg}:/database.config" \
        'cosmopterix/derby'
 
     #
