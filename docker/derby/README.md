@@ -186,7 +186,7 @@ and then login and run our tests.
     #
     # Create our scripts directory.
     tempdir=$(mktemp -d)
-    cp "mysql/sql/alpha-source.sql" "${tempdir}/001.sql"
+    cp "derby/sql/alpha-source.sql" "${tempdir}/001.sql"
     cp "data/alpha-source-data.sql" "${tempdir}/002.sql"
 
     #
@@ -196,7 +196,6 @@ and then login and run our tests.
         --detach \
         --name 'albert' \
         --volume "${tempdir}:/database.init/" \
-        --volume "${tempcfg}:/database.config" \
        'cosmopterix/derby'
 
     #
