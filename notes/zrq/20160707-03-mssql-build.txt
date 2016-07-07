@@ -20,6 +20,11 @@
 #
 #
 
+    #
+    # NOT WORKING YET
+    #
+
+
 # -------------------------------------------------------------------------------------------
 # Strict error checking.
 # http://redsymbol.net/articles/unofficial-bash-strict-mode/
