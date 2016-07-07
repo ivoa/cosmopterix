@@ -1,0 +1,347 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+    #
+    # Checking what mod(x,y) does with negative values. 
+    # 
+
+
+
+# -----------------------------------------------------
+# Oracle
+#
+
+    tempdir=$(mktemp -d)
+    cp "oracle/oracle-xe/11.2/sql/alpha-source.sql"  "${tempdir}/01-alpha.sql"
+    cp "data/alpha-source-data.sql"                  "${tempdir}/02-data.sql"
+
+    docker run \
+        --detach \
+        --name 'oracle' \
+        --volume "${tempdir}:/database.init/" \
+        "cosmopterix/oracle-xe:11.2-1.0"
+
+    docker exec \
+        --tty \
+        --interactive \
+        'oracle' \
+        sqlplus
+
+        -- Enter user-name: system
+        -- Enter password: oracle
+
+        START /database.init/01-alpha.sql
+        START /database.init/02-data.sql
+
+        SELECT
+            id,
+            decl,
+            mod( decl,  5),
+            mod(-decl,  5),
+            mod( decl, -5),
+            mod(-decl, -5)
+        FROM
+            alpha_source
+        WHERE
+                id >= 0
+            AND
+                id <= 10
+        ;
+
+	    ID	        DECL  MOD(DECL,5) MOD(-DECL,5) MOD(DECL,-5) MOD(-DECL,-5)
+    ---------- ---------- ----------- ------------ ------------ -------------
+	     1	        0          0           0            0             0
+	     2	        1          1          -1            1            -1
+	     3	        2          2          -2            2            -2
+	     4	        3          3          -3            3            -3
+	     5	        4          4          -4            4            -4
+	     6	        5          0           0            0             0
+	     7	        6          1          -1            1            -1
+	     8	        7          2          -2            2            -2
+	     9	        8          3          -3            3            -3
+	    10	        9          4          -4            4            -4
+
+# -----------------------------------------------------
+# PostgreSQL
+#
+
+    tempdir=$(mktemp -d)
+    cp "pgsql/sql/alpha-source.sql" "${tempdir}/001.sql"
+    cp "data/alpha-source-data.sql" "${tempdir}/002.sql"
+
+    docker run \
+        --detach \
+        --name 'pgsql' \
+        --volume "${tempdir}:/database.init/" \
+       'cosmopterix/pgsql'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'pgsql' \
+        'pgsql-client'
+
+            \pset pager off 
+
+            --
+            -- PostgreSQL requires both parames to be integers, not floating point.
+
+            SELECT
+                id,
+                decl,
+                mod( decl::int,  5),
+                mod(-decl::int,  5),
+                mod( decl::int, -5),
+                mod(-decl::int, -5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0
+            AND
+                id <= 10
+            ;
+
+        \q
+    
+     id | decl | mod | mod | mod | mod 
+    ----+------+-----+-----+-----+-----
+      1 |    0 |   0 |   0 |   0 |   0
+      2 |    1 |   1 |  -1 |   1 |  -1
+      3 |    2 |   2 |  -2 |   2 |  -2
+      4 |    3 |   3 |  -3 |   3 |  -3
+      5 |    4 |   4 |  -4 |   4 |  -4
+      6 |    5 |   0 |   0 |   0 |   0
+      7 |    6 |   1 |  -1 |   1 |  -1
+      8 |    7 |   2 |  -2 |   2 |  -2
+      9 |    8 |   3 |  -3 |   3 |  -3
+     10 |    9 |   4 |  -4 |   4 |  -4
+            
+# -----------------------------------------------------
+# MySQL
+#
+
+    tempdir=$(mktemp -d)
+    cp "mysql/sql/alpha-source.sql" "${tempdir}/001.sql"
+    cp "data/alpha-source-data.sql" "${tempdir}/002.sql"
+
+    docker run \
+        --detach \
+        --name 'mysql' \
+        --volume "${tempdir}:/database.init/" \
+       'cosmopterix/mysql'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mysql' \
+        'mysql-client'
+
+            SELECT
+                id,
+                decl,
+                mod( decl,  5),
+                mod(-decl,  5),
+                mod( decl, -5),
+                mod(-decl, -5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0
+            AND
+                id <= 10
+            ;
+
+        \q
+        
+    +----+------+--------------+---------------+---------------+----------------+
+    | id | decl | mod(decl, 5) | mod(-decl, 5) | mod(decl, -5) | mod(-decl, -5) |
+    +----+------+--------------+---------------+---------------+----------------+
+    |  1 |    0 |            0 |            -0 |             0 |             -0 |
+    |  2 |    1 |            1 |            -1 |             1 |             -1 |
+    |  3 |    2 |            2 |            -2 |             2 |             -2 |
+    |  4 |    3 |            3 |            -3 |             3 |             -3 |
+    |  5 |    4 |            4 |            -4 |             4 |             -4 |
+    |  6 |    5 |            0 |            -0 |             0 |             -0 |
+    |  7 |    6 |            1 |            -1 |             1 |             -1 |
+    |  8 |    7 |            2 |            -2 |             2 |             -2 |
+    |  9 |    8 |            3 |            -3 |             3 |             -3 |
+    | 10 |    9 |            4 |            -4 |             4 |             -4 |
+    +----+------+--------------+---------------+---------------+----------------+
+
+# -----------------------------------------------------
+# MariaDB
+#
+
+    tempdir=$(mktemp -d)
+    cp "mariadb/sql/alpha-source.sql" "${tempdir}/001.sql"
+    cp "data/alpha-source-data.sql"   "${tempdir}/002.sql"
+
+    docker run \
+        --detach \
+        --name 'mariadb' \
+        --volume "${tempdir}:/database.init/" \
+       'cosmopterix/mariadb'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mariadb' \
+        'mysql-client'
+
+            SELECT
+                id,
+                decl,
+                mod( decl,  5),
+                mod(-decl,  5),
+                mod( decl, -5),
+                mod(-decl, -5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0
+            AND
+                id <= 10
+            ;
+
+        \q
+
+    +----+------+--------------+---------------+---------------+----------------+
+    | id | decl | mod(decl, 5) | mod(-decl, 5) | mod(decl, -5) | mod(-decl, -5) |
+    +----+------+--------------+---------------+---------------+----------------+
+    |  1 |    0 |            0 |            -0 |             0 |             -0 |
+    |  2 |    1 |            1 |            -1 |             1 |             -1 |
+    |  3 |    2 |            2 |            -2 |             2 |             -2 |
+    |  4 |    3 |            3 |            -3 |             3 |             -3 |
+    |  5 |    4 |            4 |            -4 |             4 |             -4 |
+    |  6 |    5 |            0 |            -0 |             0 |             -0 |
+    |  7 |    6 |            1 |            -1 |             1 |             -1 |
+    |  8 |    7 |            2 |            -2 |             2 |             -2 |
+    |  9 |    8 |            3 |            -3 |             3 |             -3 |
+    | 10 |    9 |            4 |            -4 |             4 |             -4 |
+    +----+------+--------------+---------------+---------------+----------------+
+
+# -----------------------------------------------------
+# Apache Derby
+#
+
+    tempdir=$(mktemp -d)
+    cp "derby/sql/alpha-source.sql" "${tempdir}/001.sql"
+    cp "data/alpha-source-data.sql" "${tempdir}/002.sql"
+
+    docker run \
+        --detach \
+        --name 'derby' \
+        --volume "${tempdir}:/database.init/" \
+       'cosmopterix/derby'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'derby' \
+        'derby-client'
+
+            --
+            -- Derby requires both params to be integers.
+            
+            SELECT
+                id,
+                decl,
+                mod(CAST( decl AS INTEGER),  5),
+                mod(CAST(-decl AS INTEGER),  5),
+                mod(CAST( decl AS INTEGER), -5),
+                mod(CAST(-decl AS INTEGER), -5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0
+            AND
+                id <= 10
+            ;
+
+            EXIT;
+
+
+    ID         |DECL        |3          |4          |5          |6          
+    ------------------------------------------------------------------------------------
+    1          |0.0         |0          |0          |0          |0          
+    2          |1.0         |1          |-1         |1          |-1         
+    3          |2.0         |2          |-2         |2          |-2         
+    4          |3.0         |3          |-3         |3          |-3         
+    5          |4.0         |4          |-4         |4          |-4         
+    6          |5.0         |0          |0          |0          |0          
+    7          |6.0         |1          |-1         |1          |-1         
+    8          |7.0         |2          |-2         |2          |-2         
+    9          |8.0         |3          |-3         |3          |-3         
+    10         |9.0         |4          |-4         |4          |-4   
+
+# -----------------------------------------------------
+# HyperSQL
+#
+
+    tempdir=$(mktemp -d)
+    cp "hsqldb/sql/alpha-source.sql" "${tempdir}/001.sql"
+    cp "data/alpha-source-data.sql" "${tempdir}/002.sql"
+
+    docker run \
+        --detach \
+        --name 'hsqldb' \
+        --volume "${tempdir}:/database.init/" \
+       'cosmopterix/hsqldb'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'hsqldb' \
+        'hsqldb-client'
+
+            SELECT
+                id,
+                decl,
+                mod( decl,  5),
+                mod(-decl,  5),
+                mod( decl, -5),
+                mod(-decl, -5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0
+            AND
+                id <= 10
+            ;
+
+            \q
+
+    ID    DECL  C3  C4  C5  C6
+    --  ------  --  --  --  --
+     0   0.0E0   0   0   0   0
+     1   1.0E0   1  -1   1  -1
+     2   2.0E0   2  -2   2  -2
+     3   3.0E0   3  -3   3  -3
+     4   4.0E0   4  -4   4  -4
+     5   5.0E0   0   0   0   0
+     6   6.0E0   1  -1   1  -1
+     7   7.0E0   2  -2   2  -2
+     8   8.0E0   3  -3   3  -3
+     9   9.0E0   4  -4   4  -4
+    10  10.0E0   0   0   0   0
+
+
