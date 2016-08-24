@@ -28,3 +28,6 @@ Plans for :
 * [SpiderEngine](https://mariadb.com/kb/en/mariadb/spider-storage-engine-overview/)
 * [Oracle TimesTen](http://www.oracle.com/technetwork/database/database-technologies/timesten/overview/index.html)
 
+The research leading to these results has received funding from the following sources :
+* The European Community's Seventh Framework Programme (FP7-SPACE-2013-1) under grant agreement n°606740.
+* 
