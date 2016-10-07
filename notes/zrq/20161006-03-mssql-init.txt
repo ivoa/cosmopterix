@@ -1,0 +1,198 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -----------------------------------------------------
+# Build our container images.
+#[user@desktop]
+
+    tagcode=$(pwgen 8 1)
+
+    source "${HOME:?}/firethorn.settings"
+    pushd "${FIRETHORN_CODE:?}"
+
+        docker build \
+            --tag firethorn/sql-tunnel:${tagcode} \
+            docker/sql-tunnel
+
+        docker build \
+            --tag firethorn/sql-tools:${tagcode} \
+            firethorn-sqlserver/src
+
+    popd
+
+# -----------------------------------------------------
+# Create our secret function.
+#[user@desktop]
+
+    secrethost='dmr@trop01.roe.ac.uk'
+    secretfile='${HOME:?}/secret.store'
+
+    secret()
+        {
+        local key=${1:?}
+        ssh -o 'VisualHostKey=no' "${secrethost:?}" "sed -n 's/^${key}=\\(.*\\)/\\1/p' \"${secretfile:?}\"" 
+        }
+
+    secret 'frog'
+
+# -----------------------------------------------------
+# Create our sqsh config.
+#[user@desktop]
+
+    sqshconf=$(mktemp)
+    cat > "${sqshconf}" << EOF
+
+    netname=nerijus
+    sqlname=nastja
+
+    sqlhost=$(secret 'sqlserver.admin.host')
+    sqlpath=$(secret 'sqlserver.admin.path')
+
+    sqldata=$(secret 'sqlserver.admin.data')
+    sqluser=$(secret 'sqlserver.admin.user')
+    sqlpass=$(secret 'sqlserver.admin.pass')
+
+    tunneluser=$(secret 'ssh.tunnel.user')
+    tunnelhost=$(secret 'ssh.tunnel.host')
+
+EOF
+
+# -----------------------------------------------------
+# Create our Docker network.
+#[user@desktop]
+
+    source "${sqshconf}"
+
+    docker network create "${netname:?}"
+    
+# -----------------------------------------------------
+# Start our SQLServer tunnel.
+#[user@desktop]
+
+    source "${sqshconf}"
+
+    docker run \
+        --detach \
+        --interactive \
+        --name "${sqlname:?}" \
+        --net  "${netname:?}" \
+        --env  "tunneluser=${tunneluser:?}" \
+        --env  "tunnelhost=${tunnelhost:?}" \
+        --env  "targethost=${sqlhost:?}" \
+        --volume  "${SSH_AUTH_SOCK}:/tmp/ssh_auth_sock" \
+        firethorn/sql-tunnel:${tagcode}
+
+# -----------------------------------------------------
+# Create our database config.
+#[user@desktop]
+
+    dataconf=$(mktemp)
+    cat > "${dataconf}" << EOF
+databasename=adql$(date '+%Y%m%d%H%M%S')test
+databaseuser=$(pwgen 10 1)
+databasepass=$(pwgen 10 1)
+EOF
+
+# -----------------------------------------------------
+# Create our database.
+#[user@desktop]
+
+    source "${sqshconf}"
+    source "${HOME:?}/cosmopterix.settings"
+
+    testdata=${COSMOPTERIX_CODE:?}/docker/mssql/test/sql
+    
+    docker run \
+        --rm -it \
+        --net "${netname:?}" \
+        --volume "${sqshconf}":/sqsh.conf \
+        --volume "${dataconf}":/data.conf \
+        --volume "${testdata}:/database.init/" \
+        firethorn/sql-tools:${tagcode}
+        bash
+
+        #
+        # Load our configuration properties
+        source "/sqsh.conf"
+        source "/data.conf"
+
+        #
+        # Create our database and user account.
+        sqsh \
+            -S "${sqlname:?}" \
+            -U "${sqluser:?}" \
+            -P "${sqlpass:?}" \
+            << EOF
+
+            USE [master]
+            CREATE DATABASE [${databasename}] ON  PRIMARY 
+                (
+                NAME = N'${databasename}',
+                FILENAME = N'${sqlpath}\\${databasename}.mdf',
+                SIZE = 3072KB ,
+                FILEGROWTH = 1024KB
+                )
+            LOG ON 
+                (
+                NAME = N'${databasename}_log',
+                FILENAME = N'${sqlpath}\\${databasename}_log.ldf',
+                SIZE = 4096KB,
+                FILEGROWTH = 10%
+                )
+            go
+
+            USE [master]
+            CREATE LOGIN [${databaseuser}] WITH PASSWORD = '${databasepass}'
+            go
+
+            USE [${databasename}]
+            CREATE USER [${databaseuser}] FOR LOGIN [${databaseuser}]
+            go
+
+            USE [${databasename}]
+            GRANT CREATE TABLE ON DATABASE::[${databasename}] TO [${databaseuser}]
+            GRANT REFERENCES ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT EXECUTE    ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT ALTER      ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT INSERT     ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT SELECT     ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT UPDATE     ON SCHEMA::[dbo] TO [${databaseuser}]
+            GRANT DELETE     ON SCHEMA::[dbo] TO [${databaseuser}]
+            go
+
+EOF
+
+        #
+        # Create our database tables.
+        sqsh \
+            -S "${sqlname:?}" \
+            -U "${sqluser:?}" \
+            -P "${sqlpass:?}" \
+            -D "${databasename:?}"
+
+            \loop /database.init/alpha-source.sql
+            go
+
+        exit
+
+    exit
+

@@ -1,0 +1,141 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+    
+
+# -----------------------------------------------------
+# Run our query tests.
+#[user@desktop]
+
+    source "${sqshconf}"
+    source "${HOME:?}/cosmopterix.settings"
+
+    docker run \
+        --rm -it \
+        --net "${netname:?}" \
+        --volume "${sqshconf}":/sqsh.conf \
+        --volume "${dataconf}":/data.conf \
+        firethorn/sql-tools:${tagcode}
+        bash
+
+        #
+        # Load our configuration properties
+        source "/sqsh.conf"
+        source "/data.conf"
+
+        #
+        # Run our tests.
+        sqsh \
+            -S "${sqlname:?}" \
+            -U "${sqluser:?}" \
+            -P "${sqlpass:?}" \
+            -D "${databasename:?}"
+
+            --
+            -- Select the current database.
+            SELECT DB_NAME() ;
+
+            --
+            -- Test query - short names
+            SELECT TOP 5
+                ra,
+                decl
+            FROM
+                alpha_source
+                ;
+
+            --
+            -- Test query - fully qualified names
+            SELECT TOP 5
+                adql20161007040331test.dbo.alpha_source.ra,
+                adql20161007040331test.dbo.alpha_source.decl
+            FROM
+                adql20161007040331test.dbo.alpha_source
+                ;
+
+            --
+            -- Add a column with a space in the name
+            -- ALTER TABLE alpha_source ADD [column one] CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            -- ALTER TABLE alpha_source ADD [column.two] VARCHAR(8) ;
+
+            --
+            -- Test query - quoted (back-tick) short names
+            SELECT TOP 5
+                ra,
+                decl,
+                [column one],
+                [column.two]
+            FROM
+                alpha_source
+                ;
+
+            --
+            -- Test query - partially qualified, partially quoted names
+            SELECT TOP 5
+                alpha_source.[ra],
+                alpha_source.[decl],
+                alpha_source.[column one],
+                alpha_source.[column.two]
+            FROM
+                dbo.[alpha_source]
+                ;
+
+            --
+            -- Test query - partially qualified, fully quoted names
+            SELECT TOP 5
+                [alpha_source].[ra],
+                [alpha_source].[decl],
+                [alpha_source].[column one],
+                [alpha_source].[column.two]
+            FROM
+                [dbo].[alpha_source]
+                ;
+
+            --
+            -- Test query - fully qualified, fully quoted names
+            SELECT TOP 5
+                [adql20161007040331test].[dbo].[alpha_source].[ra],
+                [adql20161007040331test].[dbo].[alpha_source].[decl],
+                [adql20161007040331test].[dbo].[alpha_source].[column one],
+                [adql20161007040331test].[dbo].[alpha_source].[column.two]
+            FROM
+                [adql20161007040331test].[dbo].[alpha_source]
+                ;
+
+            --
+            -- Test query - mixed qualified, mixed quoted names
+            SELECT TOP 5
+                alpha_source.[ra],
+                [alpha_source].[decl],
+                adql20161007040331test.dbo.alpha_source.[column one],
+                [adql20161007040331test].[dbo].[alpha_source].[column.two]
+            FROM
+                [adql20161007040331test].dbo.alpha_source
+                ;
+
+        exit
+    exit
+
+
+

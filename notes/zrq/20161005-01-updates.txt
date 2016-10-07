@@ -1,0 +1,380 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -----------------------------------------------------
+# Create our local settings.
+#[user@desktop]
+
+    if [ ! -e "${HOME:?}/cosmopterix.settings" ]
+    then
+        cat > "${HOME:?}/cosmopterix.settings" << EOF
+COSMOPTERIX_HOME=/var/local/projects/edinburgh/cosmopterix
+COSMOPTERIX_CODE=\${COSMOPTERIX_HOME:?}/github
+EOF
+    fi
+    
+# -----------------------------------------------------
+# Remove existing containers and images.
+#[user@desktop]
+
+    docker rm -v $(docker stop $(docker ps -aq))
+
+    docker rmi -f $(docker images -q)
+
+# -----------------------------------------------------
+# Build our container images.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            docker build \
+                --tag "cosmopterix/fedora:23-1.1" \
+                fedora/23
+
+            docker build \
+                --tag "cosmopterix/java:8-1.1" \
+                java/8
+
+            docker build \
+                --tag "cosmopterix/pgsql-base:9.4-1.1" \
+                pgsql/base
+
+            docker build \
+                --tag "cosmopterix/pgsql-test:9.4-1.1" \
+                pgsql/test
+
+            docker build \
+                --tag "cosmopterix/mysql-base:5.6-1.1" \
+                mysql/base
+
+            docker build \
+                --tag "cosmopterix/mysql-test:5.6-1.1" \
+                mysql/test
+
+            docker build \
+                --tag "cosmopterix/mariadb-base:10.0-1.1" \
+                mariadb/base
+
+            docker build \
+                --tag "cosmopterix/mariadb-test:10.0-1.1" \
+                mariadb/test
+
+            docker build \
+                --tag "cosmopterix/derby-base:10.12-1.1" \
+                derby/base
+
+            docker build \
+                --tag "cosmopterix/derby-test:10.12-1.1" \
+                derby/test
+
+            docker build \
+                --tag "cosmopterix/hsqldb-base:2.3-1.1" \
+                hsqldb/base
+
+            docker build \
+                --tag "cosmopterix/hsqldb-test:2.3-1.1" \
+                hsqldb/test
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Create our 'waitlog' function.
+#[user@desktop]
+
+waitlog()
+    {
+    local name=${1:?Name required}
+    local text=${2:?Text required}
+    sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
+    }
+
+# -------------------------------------------------------------------------------------------
+# Test our PostgreSQL container.
+#[user@desktop]
+
+    docker run \
+        --detach \
+        --name 'pgsql' \
+        "cosmopterix/pgsql-test:9.4-1.1"
+
+    waitlog 'pgsql' '^OKGO'
+    sleep 1
+
+    docker exec \
+        --tty \
+        --interactive \
+        'pgsql' \
+        pgsql-client
+
+            \pset pager off
+
+            SELECT id, ra, decl FROM alpha_source ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+            SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+
+            --
+            
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+
+            --
+
+            SELECT
+                id,
+                decl,
+                mod( decl::int, 5),
+                mod(-decl::int, 5),
+                mod( decl::int,-5),
+                mod(-decl::int,-5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0
+            AND
+                id <= 10
+            ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our MySQL container.
+#[user@desktop]
+
+    docker run \
+        --detach \
+        --name 'mysql' \
+        "cosmopterix/mysql-test:5.6-1.1"
+
+    waitlog 'mysql' '^OKGO'
+    sleep 1
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mysql' \
+        mysql-client
+
+            SELECT id, ra, decl FROM alpha_source ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 10,10 ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 4294967295 OFFSET 10 ;
+
+            --
+
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 4294967295 OFFSET 10 ;
+
+            --
+
+            SELECT
+                id,
+                ra,
+                mod( decl, 5),
+                mod(-decl, 5),
+                mod( decl,-5),
+                mod(-decl,-5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0
+            AND
+                id <= 10
+            ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our MariaDB container.
+#[user@desktop]
+
+    docker run \
+        --detach \
+        --name 'maria' \
+        "cosmopterix/mariadb-test:10.0-1.1"
+
+    waitlog 'maria' '^OKGO'
+    sleep 1
+
+    docker exec \
+        --tty \
+        --interactive \
+        'maria' \
+        mariadb-client
+
+
+            SELECT id, ra, decl FROM alpha_source ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 10,10 ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 4294967295 OFFSET 10 ;
+
+            --
+
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 4294967295 OFFSET 10 ;
+
+            --
+
+            SELECT
+                id,
+                decl,
+                mod( decl, 5),
+                mod(-decl, 5),
+                mod( decl,-5),
+                mod(-decl,-5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0
+            AND
+                id <= 10
+            ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our Derby container.
+#[user@desktop]
+
+    docker run \
+        --detach \
+        --name 'derby' \
+        "cosmopterix/derby-test:10.12-1.1"
+
+    waitlog 'derby' '^OKGO'
+    sleep 1
+
+    docker exec \
+        --tty \
+        --interactive \
+        'derby' \
+        derby-client
+
+            SELECT id, ra, decl FROM alpha_source ;
+            SELECT id, ra, decl FROM alpha_source FETCH FIRST 10 ROWS ONLY ;
+            SELECT id, ra, decl FROM alpha_source OFFSET 10 ROWS ;
+            SELECT id, ra, decl FROM alpha_source OFFSET 10 ROWS FETCH FIRST 10 ROWS ONLY ;
+
+            --
+            
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC FETCH FIRST 10 ROWS ONLY ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ROWS ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ROWS FETCH FIRST 10 ROWS ONLY ;
+
+            --
+
+            SELECT
+                id,
+                decl,
+                mod(CAST( decl AS INTEGER), 5),
+                mod(CAST(-decl AS INTEGER), 5),
+                mod(CAST( decl AS INTEGER),-5),
+                mod(CAST(-decl AS INTEGER),-5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0
+            AND
+                id <= 10
+            ;
+
+        quit;
+
+# -------------------------------------------------------------------------------------------
+# Test our HyperSQL container.
+#[user@desktop]
+
+    docker run \
+        --detach \
+        --name 'derby' \
+        "cosmopterix/hsqldb-test:2.3-1.1"
+
+    waitlog 'derby' '^OKGO'
+    sleep 1
+
+    docker exec \
+        --tty \
+        --interactive \
+        'derby' \
+        hsqldb-client
+
+            SELECT id, ra, decl FROM alpha_source ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+            SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+            SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+            SELECT id, ra, decl FROM alpha_source OFFSET 10 LIMIT 10 ;
+
+            --
+
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 LIMIT 10 ;
+
+            --
+
+            SELECT
+                id,
+                decl,
+                mod( decl,  5),
+                mod(-decl,  5),
+                mod( decl, -5),
+                mod(-decl, -5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0
+            AND
+                id <= 10
+            ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our SQLServer container.
+#[user@desktop]
+
+    ....
+
+# -------------------------------------------------------------------------------------------
+# Test our Oracle container.
+#[user@desktop]
+
+    ....
+    
+

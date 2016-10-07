@@ -1,0 +1,412 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -------------------------------------------------------------------------------------------
+# Test our PostgreSQL container.
+#[user@desktop]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'pgsql' \
+        pgsql-client
+
+            \pset pager off
+
+            --
+            -- Test query - short names
+            SELECT
+                ra,
+                decl
+            FROM
+                alpha_source
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - fully qualified names
+            SELECT
+                public.alpha_source.ra,
+                public.alpha_source.decl
+            FROM
+                public.alpha_source
+            LIMIT 5
+                ;
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD COLUMN "column one" CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD COLUMN "column.two" VARCHAR(8) ;
+
+            --
+            -- Test query - quoted short names
+            SELECT
+                ra,
+                decl,
+                "column one",
+                "column.two"
+            FROM
+                alpha_source
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - partially qualified, partially quoted names
+            SELECT
+                alpha_source."ra",
+                alpha_source."decl",
+                alpha_source."column one",
+                alpha_source."column.two"
+            FROM
+                "public"."alpha_source"
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - partially qualified, fully quoted names
+            SELECT
+                "alpha_source"."ra",
+                "alpha_source"."decl",
+                "alpha_source"."column one",
+                "alpha_source"."column.two"
+            FROM
+                "public"."alpha_source"
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - fully qualified, fully quoted names
+            SELECT
+                "public"."alpha_source"."ra",
+                "public"."alpha_source"."decl",
+                "public"."alpha_source"."column one",
+                "public"."alpha_source"."column.two"
+            FROM
+                "public"."alpha_source"
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - mixed qualified, mixed quoted names
+            SELECT
+                alpha_source."ra",
+                "alpha_source"."decl",
+                public.alpha_source."column one",
+                "public"."alpha_source"."column.two"
+            FROM
+                "public"."alpha_source"
+            LIMIT 5
+                ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our MySQL container.
+#[user@desktop]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mysql' \
+        mysql-client
+
+            --
+            -- Get the current database name.
+            SELECT database();
+
+            /*
+             *
+            +------------+
+            | database() |
+            +------------+
+            | eiSho8ohch |
+            +------------+
+             *
+             */
+
+            --
+            -- Test query - short names
+            SELECT
+                ra,
+                decl
+            FROM
+                alpha_source
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - fully qualified names
+            SELECT
+                eiSho8ohch.alpha_source.ra,
+                eiSho8ohch.alpha_source.decl
+            FROM
+                eiSho8ohch.alpha_source
+            LIMIT 5
+                ;
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD COLUMN `column one` CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD COLUMN `column.two` VARCHAR(8) ;
+
+            --
+            -- Test query - quoted (back-tick) short names
+            SELECT
+                ra,
+                decl,
+                `column one`,
+                `column.two`
+            FROM
+                alpha_source
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - partially qualified, partially quoted names
+            SELECT
+                alpha_source.`ra`,
+                alpha_source.`decl`,
+                alpha_source.`column one`,
+                alpha_source.`column.two`
+            FROM
+                eiSho8ohch.`alpha_source`
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - partially qualified, fully quoted names
+            SELECT
+                `alpha_source`.`ra`,
+                `alpha_source`.`decl`,
+                `alpha_source`.`column one`,
+                `alpha_source`.`column.two`
+            FROM
+                `eiSho8ohch`.`alpha_source`
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - fully qualified, fully quoted names
+            SELECT
+                `eiSho8ohch`.`alpha_source`.`ra`,
+                `eiSho8ohch`.`alpha_source`.`decl`,
+                `eiSho8ohch`.`alpha_source`.`column one`,
+                `eiSho8ohch`.`alpha_source`.`column.two`
+            FROM
+                `eiSho8ohch`.`alpha_source`
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - mixed qualified, mixed quoted names
+            SELECT
+                alpha_source.`ra`,
+                `alpha_source`.`decl`,
+                eiSho8ohch.alpha_source.`column one`,
+                `eiSho8ohch`.`alpha_source`.`column.two`
+            FROM
+                `eiSho8ohch`.alpha_source
+            LIMIT 5
+                ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our MariaDB container.
+#[user@desktop]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'maria' \
+        mariadb-client
+
+            --
+            -- Get the current database name.
+            SELECT database();
+
+            /*
+             *
+            +------------+
+            | database() |
+            +------------+
+            | Gooko1ieGh |
+            +------------+
+             *
+             */
+
+            --
+            -- Test query - short names
+            SELECT
+                ra,
+                decl
+            FROM
+                alpha_source
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - fully qualified names
+            SELECT
+                Gooko1ieGh.alpha_source.ra,
+                Gooko1ieGh.alpha_source.decl
+            FROM
+                Gooko1ieGh.alpha_source
+            LIMIT 5
+                ;
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD COLUMN `column one` CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD COLUMN `column.two` VARCHAR(8) ;
+
+            --
+            -- Test query - quoted (back-tick) short names
+            SELECT
+                ra,
+                decl,
+                `column one`,
+                `column.two`
+            FROM
+                alpha_source
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - partially qualified, partially quoted names
+            SELECT
+                alpha_source.`ra`,
+                alpha_source.`decl`,
+                alpha_source.`column one`,
+                alpha_source.`column.two`
+            FROM
+                Gooko1ieGh.`alpha_source`
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - partially qualified, fully quoted names
+            SELECT
+                `alpha_source`.`ra`,
+                `alpha_source`.`decl`,
+                `alpha_source`.`column one`,
+                `alpha_source`.`column.two`
+            FROM
+                `Gooko1ieGh`.`alpha_source`
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - fully qualified, fully quoted names
+            SELECT
+                `Gooko1ieGh`.`alpha_source`.`ra`,
+                `Gooko1ieGh`.`alpha_source`.`decl`,
+                `Gooko1ieGh`.`alpha_source`.`column one`,
+                `Gooko1ieGh`.`alpha_source`.`column.two`
+            FROM
+                `Gooko1ieGh`.`alpha_source`
+            LIMIT 5
+                ;
+
+            --
+            -- Test query - mixed qualified, mixed quoted names
+            SELECT
+                alpha_source.`ra`,
+                `alpha_source`.`decl`,
+                Gooko1ieGh.alpha_source.`column one`,
+                `Gooko1ieGh`.`alpha_source`.`column.two`
+            FROM
+                `Gooko1ieGh`.alpha_source
+            LIMIT 5
+                ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our Derby container.
+#[user@desktop]
+
+    dockname=derby
+
+    docker run \
+        --detach \
+        --name "${dockname:?}" \
+        "cosmopterix/derby-test:10.12-1.1"
+
+    waitlog "${dockname:?}" '^OKGO'
+    sleep 1
+
+    docker exec \
+        --tty \
+        --interactive \
+        "${dockname:?}" \
+        derby-client
+
+            --
+
+        quit;
+
+# -------------------------------------------------------------------------------------------
+# Test our HyperSQL container.
+#[user@desktop]
+
+    dockname=hsqldb
+
+    docker run \
+        --detach \
+        --name "${dockname:?}" \
+        "cosmopterix/hsqldb-test:2.3-1.1"
+
+    waitlog "${dockname:?}" '^OKGO'
+    sleep 1
+
+    docker exec \
+        --tty \
+        --interactive \
+        "${dockname:?}" \
+        hsqldb-client
+
+            --
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our Oracle container.
+#[user@desktop]
+
+    ....
+    
+# -------------------------------------------------------------------------------------------
+# Test our SQLServer container.
+#[user@desktop]
+
+    ....
+

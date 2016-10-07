@@ -20,6 +20,14 @@
 --
 --
 
+CREATE TABLE alpha_source
+    (
+    id   INTEGER NOT NULL IDENTITY PRIMARY KEY,
+    ra   DOUBLE PRECISION NOT NULL,
+    decl DOUBLE PRECISION NOT NULL
+    );
+
+
 INSERT INTO alpha_source (ra, decl) VALUES (0.0,  0.0) ;
 INSERT INTO alpha_source (ra, decl) VALUES (0.0,  1.0) ;
 INSERT INTO alpha_source (ra, decl) VALUES (0.0,  2.0) ;

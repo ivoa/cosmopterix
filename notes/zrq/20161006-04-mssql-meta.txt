@@ -1,0 +1,195 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -----------------------------------------------------
+# Run our metadata tests.
+#[user@desktop]
+
+    source "${sqshconf}"
+    source "${HOME:?}/cosmopterix.settings"
+
+    docker run \
+        --rm -it \
+        --net "${netname:?}" \
+        --volume "${sqshconf}":/sqsh.conf \
+        --volume "${dataconf}":/data.conf \
+        firethorn/sql-tools:${tagcode}
+        bash
+
+        #
+        # Load our configuration properties
+        source "/sqsh.conf"
+        source "/data.conf"
+
+        sqsh \
+            -S "${sqlname:?}" \
+            -U "${sqluser:?}" \
+            -P "${sqlpass:?}" \
+            -D "${databasename:?}"
+
+            --
+            -- Select the current database.
+            SELECT DB_NAME() ;
+
+            --
+            -- List the catalogs.
+            SELECT
+                name,
+                database_id,
+                create_date
+            FROM
+                sys.databases
+            WHERE
+                name LIKE 'adql%'
+            ;
+
+            /*
+             *
+	        name                    id   create_date               
+	        ----------------------  ---- --------------------------
+	        adql20161007025154test  121  Oct  7 2016 03:02:53:373AM
+	        adql20161007030346test  122  Oct  7 2016 03:04:23:833AM
+	        adql20160429162040test  138  Apr 29 2016 04:21:20:837PM
+             *
+             */
+
+            --
+            -- List the schemas in our current database.
+            SELECT
+                catalog_name,
+                schema_name
+            FROM
+                information_schema.schemata
+            WHERE
+                catalog_name = DB_NAME()
+            AND
+                schema_name NOT LIKE 'db[_]%'
+            ;
+
+            /*
+             *
+            catalog_name            schema_name
+            ----------------------  ------------------
+            adql20161007030346test  dbo
+            adql20161007030346test  guest
+            adql20161007030346test  INFORMATION_SCHEMA
+            adql20161007030346test  sys
+             *
+             */                         
+
+            --
+            -- List the tables in our 'dbo' schema.
+            SELECT
+                table_catalog,
+                table_schema,
+                table_name,
+                table_type
+            FROM
+                information_schema.tables
+            WHERE
+                table_catalog = DB_NAME()
+            AND
+                table_schema = 'dbo'
+            ;
+
+            /*
+             *
+            table_catalog           table_schema  table_name    table_type
+            ----------------------  ------------  ------------  ----------
+            adql20161007030346test  dbo           alpha_source  BASE TABLE
+             *
+             */
+
+            --
+            -- List the columns in our 'alpha_source' table.
+            SELECT
+                table_catalog,
+                table_schema,
+                table_name,
+                column_name,
+                data_type
+            FROM
+                information_schema.columns
+            WHERE
+                table_catalog = DB_NAME()
+            AND
+                table_schema = 'dbo'
+            ;
+
+            /*
+             *
+            table_catalog           table_schema  table_name    column_name  data_type
+            ----------------------  ------------  ------------  -----------  ---------
+            adql20161007030346test  dbo           alpha_source  id           int
+            adql20161007030346test  dbo           alpha_source  ra           float
+            adql20161007030346test  dbo           alpha_source  decl         float
+             *
+             */
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD [column one] CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD [column.two] VARCHAR(8) ;
+
+            --
+            -- List the metadata for the new columns.
+            SELECT
+                table_catalog,
+                table_schema,
+                table_name,
+                column_name,
+                data_type
+            FROM
+                information_schema.columns
+            WHERE
+                column_name LIKE 'column%'
+            AND
+                table_catalog = DB_NAME()
+            AND
+                table_schema = 'dbo'
+            ;
+
+            /*
+             *
+            table_catalog           table_schema  table_name    column_name  data_type
+            ----------------------  ------------  ------------  -----------  ---------
+            adql20161007030346test  dbo           alpha_source  column one   char
+            adql20161007030346test  dbo           alpha_source  column.two   varchar
+             *
+             */
+
+            --
+            -- Select data from the new columns.
+            SELECT
+            TOP 10
+                [column one],
+                [column.two]
+            FROM
+                alpha_source
+            ;
+
+        exit
+    exit
+

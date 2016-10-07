@@ -1,0 +1,879 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -------------------------------------------------------------------------------------------
+# Test our PostgreSQL container.
+#[user@desktop]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'pgsql' \
+        pgsql-client
+
+            \pset pager off
+
+            --
+            -- Select the current database.
+            SELECT current_database();
+
+            --
+            -- List the schemas (namespaces).
+            SELECT
+                oid,
+                nspname
+            FROM
+                pg_namespace
+                ;
+
+            /*
+             *
+              oid  |      nspname       
+            -------+--------------------
+                99 | pg_toast
+             11320 | pg_temp_1
+             11321 | pg_toast_temp_1
+                11 | pg_catalog
+              2200 | public
+             12540 | information_schema
+             *
+             */
+
+            --
+            -- List the tables (classes) in the 'public' schema (namespace).
+            SELECT
+                oid,
+                relname,
+                relpersistence,
+                relkind
+            FROM
+                pg_class
+            WHERE
+                relkind = 'r'
+            AND
+                relnamespace = (
+                    SELECT
+                        oid
+                    FROM
+                        pg_namespace
+                    WHERE
+                        nspname = 'public'
+                        ) 
+                ;                
+
+            /*
+             *
+              oid  |   relname    | relpersistence | relkind 
+            -------+--------------+----------------+---------
+             16388 | alpha_source | p              | r
+             *
+             */
+
+            --
+            -- List the columns (attributes) in our 'alpha_source' table (class).
+            SELECT
+                attname,
+                attnum,
+                atttypid
+            FROM
+                pg_attribute
+            WHERE
+                attrelid = (
+                    SELECT
+                        oid
+                    FROM
+                        pg_class
+                    WHERE
+                        relname = 'alpha_source'
+                    AND
+                        relkind = 'r'
+                    AND
+                        relnamespace = (
+                            SELECT
+                                oid
+                            FROM
+                                pg_namespace
+                            WHERE
+                                nspname = 'public'
+                                ) 
+                    )
+                ;
+
+            /*
+             *
+              attname   | attnum | atttypid 
+            ------------+--------+----------
+             tableoid   |     -7 |       26 
+             cmax       |     -6 |       29 
+             xmax       |     -5 |       28 
+             cmin       |     -4 |       29 
+             xmin       |     -3 |       28 
+             ctid       |     -1 |       27 
+             id         |      1 |       23 
+             ra         |      2 |      701 
+             decl       |      3 |      701 
+             *
+             */
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD COLUMN "column one" CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD COLUMN "column.two" VARCHAR(8) ;
+
+            --
+            -- List the metadata for the new columns.
+            SELECT
+                attname,
+                attnum,
+                atttypid
+            FROM
+                pg_attribute
+            WHERE
+                attname LIKE 'column%'
+            AND
+                attrelid = (
+                    SELECT
+                        oid
+                    FROM
+                        pg_class
+                    WHERE
+                        relname = 'alpha_source'
+                    AND
+                        relkind = 'r'
+                    AND
+                        relnamespace = (
+                            SELECT
+                                oid
+                            FROM
+                                pg_namespace
+                            WHERE
+                                nspname = 'public'
+                                ) 
+                    )
+                ;
+
+            /*
+             *
+              attname   | attnum | atttypid 
+            ------------+--------+----------
+             column one |      4 |     1042 
+             column.two |      5 |     1043 
+             *
+             */
+
+            --
+            -- Check we can select data from the new columns.
+            SELECT
+                "column one",
+                "column.two"
+            FROM
+                alpha_source
+            LIMIT 10
+            ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our MySQL container.
+#[user@desktop]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mysql' \
+        mysql-client
+
+            --
+            -- Select the current database.
+            SELECT database() ;
+
+            --
+            -- List the schemas (databases).
+            SELECT
+                catalog_name,
+                schema_name
+            FROM
+                information_schema.schemata
+                ;
+
+            /*
+             *
+            +--------------+--------------------+
+            | catalog_name | schema_name        |
+            +--------------+--------------------+
+            | def          | information_schema |
+            | def          | eiSho8ohch         |
+            +--------------+--------------------+
+             *
+             */
+
+            --
+            -- List the tables in our current schema (database).
+            SELECT
+                table_catalog,
+                table_schema,
+                table_name
+            FROM
+                information_schema.tables
+            WHERE
+                table_schema = (
+                    SELECT database()
+                    )
+                ;
+
+            /*
+             *
+            +---------------+--------------+--------------+
+            | table_catalog | table_schema | table_name   |
+            +---------------+--------------+--------------+
+            | def           | eiSho8ohch   | alpha_source |
+            +---------------+--------------+--------------+
+             *
+             */
+
+            --
+            -- List the columns in our 'alpha_source' table.
+            SELECT
+                table_catalog,
+                table_schema,
+                table_name,
+                column_name,
+                column_type
+            FROM
+                information_schema.columns
+            WHERE
+                table_schema = (
+                    SELECT database()
+                    )
+            AND
+                table_name = 'alpha_source'
+                ;
+
+            /*
+             *
+            +---------------+--------------+--------------+-------------+-------------+
+            | table_catalog | table_schema | table_name   | column_name | column_type |
+            +---------------+--------------+--------------+-------------+-------------+
+            | def           | eiSho8ohch   | alpha_source | id          | int(11)     |
+            | def           | eiSho8ohch   | alpha_source | ra          | double      |
+            | def           | eiSho8ohch   | alpha_source | decl        | double      |
+            +---------------+--------------+--------------+-------------+-------------+
+             *
+             */
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD COLUMN `column one` CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD COLUMN `column.two` VARCHAR(8) ;
+
+            --
+            -- List the metadata for the new columns.
+            SELECT
+                table_catalog,
+                table_schema,
+                table_name,
+                column_name,
+                column_type
+            FROM
+                information_schema.columns
+            WHERE
+                table_schema = (
+                    SELECT database()
+                    )
+            AND
+                table_name = 'alpha_source'
+            AND
+                column_name LIKE 'column%'
+                ;
+
+            /*
+             *
+            +---------------+--------------+--------------+-------------+-------------+
+            | table_catalog | table_schema | table_name   | column_name | column_type |
+            +---------------+--------------+--------------+-------------+-------------+
+            | def           | eiSho8ohch   | alpha_source | column one  | char(8)     |
+            | def           | eiSho8ohch   | alpha_source | column.two  | varchar(8)  |
+            +---------------+--------------+--------------+-------------+-------------+
+             *
+             */
+
+            --
+            -- Select data from the new columns.
+            SELECT
+                `column one`,
+                `column.two`
+            FROM
+                alpha_source
+            LIMIT 10
+            ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our MariaDB container.
+#[user@desktop]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'maria' \
+        mariadb-client
+
+            --
+            -- Select the current database.
+            SELECT database() ;
+
+            --
+            -- List the schemas (databases).
+            SELECT
+                catalog_name,
+                schema_name
+            FROM
+                information_schema.schemata
+                ;
+
+            /*
+             *
+            +--------------+--------------------+
+            | catalog_name | schema_name        |
+            +--------------+--------------------+
+            | def          | information_schema |
+            | def          | eiSho8ohch         |
+            +--------------+--------------------+
+             *
+             */
+
+            --
+            -- List the tables in our current schema (database).
+            SELECT
+                table_catalog,
+                table_schema,
+                table_name
+            FROM
+                information_schema.tables
+            WHERE
+                table_schema = (
+                    SELECT database()
+                    )
+                ;
+
+            /*
+             *
+            +---------------+--------------+--------------+
+            | table_catalog | table_schema | table_name   |
+            +---------------+--------------+--------------+
+            | def           | eiSho8ohch   | alpha_source |
+            +---------------+--------------+--------------+
+             *
+             */
+
+            --
+            -- List the columns in our 'alpha_source' table.
+            SELECT
+                table_catalog,
+                table_schema,
+                table_name,
+                column_name,
+                column_type
+            FROM
+                information_schema.columns
+            WHERE
+                table_schema = (
+                    SELECT database()
+                    )
+            AND
+                table_name = 'alpha_source'
+                ;
+
+            /*
+             *
+            +---------------+--------------+--------------+-------------+-------------+
+            | table_catalog | table_schema | table_name   | column_name | column_type |
+            +---------------+--------------+--------------+-------------+-------------+
+            | def           | eiSho8ohch   | alpha_source | id          | int(11)     |
+            | def           | eiSho8ohch   | alpha_source | ra          | double      |
+            | def           | eiSho8ohch   | alpha_source | decl        | double      |
+            +---------------+--------------+--------------+-------------+-------------+
+             *
+             */
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD COLUMN `column one` CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD COLUMN `column.two` VARCHAR(8) ;
+
+            --
+            -- List the metadata for the new columns.
+            SELECT
+                table_catalog,
+                table_schema,
+                table_name,
+                column_name,
+                column_type
+            FROM
+                information_schema.columns
+            WHERE
+                table_schema = (
+                    SELECT database()
+                    )
+            AND
+                table_name = 'alpha_source'
+            AND
+                column_name LIKE 'column%'
+                ;
+
+            /*
+             *
+            +---------------+--------------+--------------+-------------+-------------+
+            | table_catalog | table_schema | table_name   | column_name | column_type |
+            +---------------+--------------+--------------+-------------+-------------+
+            | def           | eiSho8ohch   | alpha_source | column one  | char(8)     |
+            | def           | eiSho8ohch   | alpha_source | column.two  | varchar(8)  |
+            +---------------+--------------+--------------+-------------+-------------+
+             *
+             */
+
+            --
+            -- Select data from the new columns.
+            SELECT
+                `column one`,
+                `column.two`
+            FROM
+                alpha_source
+            LIMIT 10
+            ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our Derby container.
+#[user@desktop]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'derby' \
+        derby-client
+
+            --
+            -- Select the current database.
+
+            --
+            -- List the schemas (databases).
+            SELECT
+                schemaid,
+                schemaname
+            FROM
+                sys.sysschemas
+                ;
+
+            /*
+             *
+            SCHEMAID                            |SCHEMANAME
+            -----------------------------------------------
+            c013800d-00f8-5b53-28a9-00000019ed88|SYSIBM    
+            8000000d-00d0-fd77-3ed8-000a0a0b1900|SYS       
+            c013800d-00fb-2641-07ec-000000134f30|SYSCAT    
+            c013800d-00fb-2642-07ec-000000134f30|SYSFUN    
+            c013800d-00fb-2643-07ec-000000134f30|SYSPROC   
+            c013800d-00fb-2644-07ec-000000134f30|SYSSTAT   
+            c013800d-00fb-2647-07ec-000000134f30|NULLID    
+            c013800d-00fb-2648-07ec-000000134f30|SQLJ      
+            c013800d-00fb-2646-07ec-000000134f30|SYSCS_DIAG
+            c013800d-00fb-2649-07ec-000000134f30|SYSCS_UTIL
+            80000000-00d2-b38f-4cda-000a0a412c00|APP       
+             *
+             */
+
+            --
+            -- List the tables in our current schema (database).
+            SELECT
+                tableid,
+                tablename,
+                schemaid
+            FROM
+                sys.systables
+            WHERE
+                tabletype = 'T'
+            AND
+                schemaid = (
+                    SELECT
+                        schemaid
+                    FROM
+                        sys.sysschemas
+                    WHERE
+                        schemaname = 'APP'
+                    )
+                ;
+
+            /*
+             *
+            TABLEID                             |TABLENAME    |SCHEMAID                            
+            ---------------------------------------------------------------------------------------
+            a02ac013-0157-99e3-6e86-00000df051c0|ALPHA_SOURCE |80000000-00d2-b38f-4cda-000a0a412c00
+             *
+             */
+
+            --
+            -- List the columns in our 'alpha_source' table.
+            SELECT
+                columnname,
+                columnnumber,
+                columndatatype
+            FROM
+                sys.syscolumns
+            WHERE
+                referenceid = (
+                    SELECT
+                        tableid
+                    FROM
+                        sys.systables
+                    WHERE
+                        tablename = 'ALPHA_SOURCE'
+                    AND
+                        tabletype = 'T'
+                    AND
+                        schemaid = (
+                            SELECT
+                                schemaid
+                            FROM
+                                sys.sysschemas
+                            WHERE
+                                schemaname = 'APP'
+                            )
+                    )
+                ;
+
+            /*
+             *
+            COLUMNNAME |COLUMNNUMBER |COLUMNDATATYPE 
+            ------------------------------------------
+            DECL       |3            |DOUBLE NOT NULL
+            ID         |1            |INTEGER NOT NULL
+            RA         |2            |DOUBLE NOT NULL
+             *
+             */
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD COLUMN "column one" CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD COLUMN "column.two" VARCHAR(8) ;
+
+            --
+            -- List the metadata for the new columns.
+            SELECT
+                columnname,
+                columnnumber,
+                columndatatype
+            FROM
+                sys.syscolumns
+            WHERE
+                columnname LIKE 'column%'
+            AND
+                referenceid = (
+                    SELECT
+                        tableid
+                    FROM
+                        sys.systables
+                    WHERE
+                        tablename = 'ALPHA_SOURCE'
+                    AND
+                        tabletype = 'T'
+                    AND
+                        schemaid = (
+                            SELECT
+                                schemaid
+                            FROM
+                                sys.sysschemas
+                            WHERE
+                                schemaname = 'APP'
+                            )
+                    )
+                ;
+
+            /*
+             *
+            COLUMNNAME |COLUMNNUMBER|COLUMNDATATYPE
+            ---------------------------------------
+            column one |4           |CHAR(8)       
+            column.two |5           |VARCHAR(8)    
+             *
+             */
+
+            --
+            -- Select data from the new columns.
+            SELECT
+                "column one",
+                "column.two"
+            FROM
+                alpha_source
+            FETCH
+                FIRST 10 ROWS ONLY
+            ;
+
+        quit;
+
+# -------------------------------------------------------------------------------------------
+# Test our HyperSQL container.
+#[user@desktop]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'hsqldb' \
+        hsqldb-client
+
+
+            --
+            -- List the schemas.
+            SELECT
+                *
+            FROM
+                information_schema.system_schemas
+                ;
+
+            /*
+             *
+            TABLE_SCHEM         TABLE_CATALOG  IS_DEFAULT
+            ------------------  -------------  ----------
+            INFORMATION_SCHEMA  PUBLIC         FALSE
+            PUBLIC              PUBLIC         TRUE
+            SYSTEM_LOBS         PUBLIC         FALSE
+             *
+             */
+
+            --
+            -- List the tables in the 'PUBLIC' schema.
+            SELECT
+                table_cat,
+                table_schem,
+                table_name,
+                table_type
+            FROM
+                information_schema.system_tables
+            WHERE
+                table_cat = 'PUBLIC'
+            AND
+                table_schem = 'PUBLIC'
+                ;
+
+            /*
+             *
+            TABLE_CAT  TABLE_SCHEM  TABLE_NAME    TABLE_TYPE
+            ---------  -----------  ------------  ----------
+            PUBLIC     PUBLIC       ALPHA_SOURCE  TABLE
+             *
+             */
+
+            --
+            -- List the columns in our 'alpha_source' table.
+            SELECT
+                table_cat,
+                table_schem,
+                table_name,
+                column_name,
+                data_type,
+                type_name
+            FROM
+                information_schema.system_columns
+            WHERE
+                table_cat = 'PUBLIC'
+            AND
+                table_schem = 'PUBLIC'
+            AND
+                table_name = 'ALPHA_SOURCE'
+                ;
+
+
+            /*
+             *
+            TABLE_CAT  TABLE_SCHEM  TABLE_NAME    COLUMN_NAME  DATA_TYPE  TYPE_NAME
+            ---------  -----------  ------------  -----------  ---------  ---------
+            PUBLIC     PUBLIC       ALPHA_SOURCE  ID                   4  INTEGER
+            PUBLIC     PUBLIC       ALPHA_SOURCE  RA                   8  DOUBLE
+            PUBLIC     PUBLIC       ALPHA_SOURCE  DECL                 8  DOUBLE
+             *
+             */
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD COLUMN "column one" CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD COLUMN "column.two" VARCHAR(8) ;
+
+            --
+            -- List the metadata for the new columns.
+            SELECT
+                table_cat,
+                table_schem,
+                table_name,
+                column_name,
+                data_type,
+                type_name
+            FROM
+                information_schema.system_columns
+            WHERE
+                column_name LIKE 'column%'
+            AND
+                table_cat = 'PUBLIC'
+            AND
+                table_schem = 'PUBLIC'
+            AND
+                table_name = 'ALPHA_SOURCE'
+                ;
+
+
+            /*
+             *
+            TABLE_CAT  TABLE_SCHEM  TABLE_NAME    COLUMN_NAME  DATA_TYPE  TYPE_NAME
+            ---------  -----------  ------------  -----------  ---------  ---------
+            PUBLIC     PUBLIC       ALPHA_SOURCE  column one           1  CHARACTER
+            PUBLIC     PUBLIC       ALPHA_SOURCE  column.two          12  VARCHAR
+             *
+             */
+
+            --
+            -- Select data from the new columns.
+            SELECT
+                "column one",
+                "column.two"
+            FROM
+                alpha_source
+            LIMIT 10
+            ;
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our SQLServer container.
+#[user@desktop]
+
+
+    touch  "${HOME:?}/data.properties"
+    chmod a+rw \
+        "${HOME:?}/data.properties" 
+    chcon -t svirt_sandbox_file_t \
+        "${HOME:?}/data.properties" 
+
+    source "${HOME:?}/sqsh.properties"
+    
+    docker run \
+        --rm -it \
+        --link "${sqlname:?}:${sqllink:?}" \
+        --volume "${HOME:?}/chain.properties":/chain.properties \
+        --volume "${HOME:?}/sqsh.properties":/sqsh.properties \
+        --volume "${HOME:?}/data.properties":/data.properties \
+        firethorn/sqsh:1.1 \
+        bash
+
+        #
+        # Load the SQLServer properties
+        source "/sqsh.properties"
+
+        #
+        # Test connection to SQLServer
+        sqsh \
+            -S "${sqllink:?}" \
+            -U "${sqluser:?}" \
+            -P "${sqlpass:?}" \
+            -C "SELECT name FROM master..sysdatabases WHERE name LIKE 'Firethorn%'"
+
+
+            --
+            -- Select the current database.
+
+            --
+            -- List the schemas (databases).
+
+            /*
+             *
+
+             *
+             */
+
+            --
+            -- List the tables in our current schema (database).
+
+            /*
+             *
+
+             *
+             */
+
+            --
+            -- List the columns in our 'alpha_source' table.
+
+            /*
+             *
+
+             *
+             */
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD COLUMN `column one` CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD COLUMN `column.two` VARCHAR(8) ;
+
+            --
+            -- List the metadata for the new columns.
+
+            /*
+             *
+
+             *
+             */
+
+            --
+            -- Select data from the new columns.
+            SELECT
+                `column one`,
+                `column.two`
+            FROM
+                alpha_source
+            LIMIT 10
+            ;
+
+
+# -------------------------------------------------------------------------------------------
+# Test our Oracle container.
+#[user@desktop]
+
+    ....
+    
+

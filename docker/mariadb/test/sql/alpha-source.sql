@@ -20,6 +20,14 @@
 --
 --
 
+CREATE TABLE IF NOT EXISTS alpha_source
+    (
+    id   INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    ra   DOUBLE NOT NULL,
+    decl DOUBLE NOT NULL
+    );
+
+
 INSERT INTO alpha_source (ra, decl) VALUES (0.0,  0.0) ;
 INSERT INTO alpha_source (ra, decl) VALUES (0.0,  1.0) ;
 INSERT INTO alpha_source (ra, decl) VALUES (0.0,  2.0) ;

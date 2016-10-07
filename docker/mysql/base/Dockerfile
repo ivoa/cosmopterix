@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015, ROE (http://www.roe.ac.uk/)
+# Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,9 +18,33 @@
 FROM cosmopterix/fedora:23-1.1
 MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 
-ENV JAVA_VERSION 1.8.0
+#
+# MySQL version
+ENV mysqlversion 5.6.33
 
 #
-# Install Java
-RUN dnf -y install java-${JAVA_VERSION}-openjdk-headless
+# Default port number.
+ENV serverport 3306
+EXPOSE ${serverport}
 
+#
+# Default data path.
+ENV serverdata /var/lib/mysql
+VOLUME ${serverdata}
+
+#
+# Add our install scripts. 
+COPY bin /usr/local/bin/
+RUN chmod a+x /usr/local/bin/*
+
+#
+# Run our install scripts.
+RUN /usr/local/bin/install-mysql
+
+#
+# Install our entry point script.
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
+
+#
+# Set the default command.
+CMD ["start"]

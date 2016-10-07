@@ -18,9 +18,34 @@
 FROM cosmopterix/fedora:23-1.1
 MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 
-ENV JAVA_VERSION 1.8.0
+#
+# PostgreSQL version
+ENV pgsqlversion=9.4.9
 
 #
-# Install Java
-RUN dnf -y install java-${JAVA_VERSION}-openjdk-headless
+# Default port number.
+ENV serverport 5432
+EXPOSE ${serverport}
+
+#
+# Default data path.
+ENV serverdata /var/lib/pgsql
+VOLUME ${serverdata}
+
+#
+# Add our shell scripts. 
+COPY bin /usr/local/bin/
+RUN chmod a+x /usr/local/bin/*
+
+#
+# Run our install script.
+RUN /usr/local/bin/install-pgsql
+
+#
+# Install our entrypoint script.
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
+
+#
+# The default entrypoint command.
+CMD ["start"]
 

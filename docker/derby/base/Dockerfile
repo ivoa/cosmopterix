@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015, ROE (http://www.roe.ac.uk/)
+# Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,12 +15,41 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM cosmopterix/fedora:23-1.1
+FROM cosmopterix/java:8-1.1
 MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 
-ENV JAVA_VERSION 1.8.0
+#
+# Derby version
+ENV derbyversion=10.12.1.1
 
 #
-# Install Java
-RUN dnf -y install java-${JAVA_VERSION}-openjdk-headless
+# Default port number.
+ENV serverport 1527
+EXPOSE ${serverport}
+
+#
+# Default code path.
+ENV servercode /usr/lib/derby
+
+#
+# Default data path.
+ENV serverdata /var/lib/derby
+VOLUME ${serverdata}
+
+#
+# Add our install scripts. 
+COPY bin /usr/local/bin/
+RUN chmod a+x /usr/local/bin/*
+
+#
+# Run our install scripts.
+RUN /usr/local/bin/install-derby
+
+#
+# Install our entry point script.
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
+
+#
+# Set the default command.
+CMD ["start"]
 
