@@ -46,7 +46,7 @@ ENV PATH        $ORACLE_HOME/bin:$PATH
 
 RUN /etc/init.d/oracle-xe configure responseFile=/u01/app/oracle/product/11.2.0/xe/config/scripts/xe.rsp
 
-# Run script
+# Run the startup script.
 ADD bin/start.sh /
 RUN chmod a+x /start.sh
 CMD /start.sh
