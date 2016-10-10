@@ -1,0 +1,186 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -----------------------------------------------------
+# Run our metadata tests.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+
+    docker exec \
+        --tty \
+        --interactive \
+        'oracle' \
+            sqlplus
+
+            -- Enter user-name : system
+            -- Enter password  : oracle
+
+            --
+            -- Select data about the current database.
+            SELECT sys_context('userenv','instance_name') FROM dual ;
+            SELECT sys_context('userenv','db_name') FROM dual ;
+            SELECT sys_context('userenv','sid') FROM dual ;
+
+
+            --
+            -- List the catalogs.
+
+            /*
+             *
+             *
+             */
+
+            --
+            -- List the schemas in our current database.
+            -- https://stackoverflow.com/questions/4833459/oracle-sql-query-for-listing-all-schemas-in-a-db
+            SELECT
+                username
+            FROM
+                dba_users
+            WHERE EXISTS (
+                SELECT 1
+                FROM
+                    dba_objects
+                WHERE
+                    dba_objects.owner = dba_users.username
+                    )
+                ;
+
+            --
+            -- * Our test data should not be in SYSTEM.
+            --    AND
+            --        default_tablespace NOT IN ('SYSTEM','SYSAUX')
+            --    ;
+
+            /*
+             *
+            USERNAME
+            ------------------------------
+            HR
+             *
+             */                         
+
+            --
+            -- List the tables in the 'SYSTEM' schema.
+            SELECT DISTINCT
+                owner,
+                object_name 
+            FROM
+                dba_objects
+            WHERE
+                object_type = 'TABLE'
+            AND
+                owner = 'SYSTEM'
+                ;
+
+
+            -- * Our test data should not be in SYSTEM.
+            --    AND
+            --        owner = 'SYSTEM'
+            --        ;
+
+            /*
+             *
+            OWNER                          OBJECT_NAME
+            ------------------------------ --------------------------------------------------------------------------------
+            SYSTEM                         LOGMNR_PROCESSED_LOG$
+            SYSTEM                         LOGMNR_RESTART_CKPT$
+            SYSTEM                         LOGMNR_FILTER$
+            ......                         ............
+            SYSTEM                         ALPHA_SOURCE
+            ......                         ............
+            SYSTEM                         REPCAT$_RUNTIME_PARMS
+            SYSTEM                         LOGMNRC_GSII
+            SYSTEM                         LOGMNRC_GSBA
+             *
+             */
+
+            --
+            -- List the columns in our 'alpha_source' table.
+            SELECT
+                owner,
+                table_name,
+                column_name,
+                data_type
+            FROM
+                all_tab_columns
+            WHERE
+                table_name = 'ALPHA_SOURCE'
+                ;
+
+            /*
+             *
+            OWNER     TABLE_NAME      COLUMN_NAME    DATA_TYPE
+            ------------------------------------------------------
+            SYSTEM    ALPHA_SOURCE    ID             NUMBER
+            SYSTEM    ALPHA_SOURCE    RA             FLOAT
+            SYSTEM    ALPHA_SOURCE    DECL           FLOAT
+             *
+             */
+
+            --
+            -- Add a column with a space in the name
+            ALTER TABLE alpha_source ADD "column one" CHAR(8) ;
+
+            --
+            -- Add a column with a dot in the name
+            ALTER TABLE alpha_source ADD "column.two" VARCHAR(8) ;
+
+            --
+            -- List the metadata for the new columns.
+            SELECT
+                owner,
+                table_name,
+                column_name,
+                data_type
+            FROM
+                all_tab_columns
+            WHERE
+                table_name = 'ALPHA_SOURCE'
+            AND
+                column_name LIKE 'column%'
+                ;
+
+            /*
+             *
+            OWNER     TABLE_NAME      COLUMN_NAME    DATA_TYPE
+            ------------------------------------------------------
+            SYSTEM    ALPHA_SOURCE    column one     CHAR
+            SYSTEM    ALPHA_SOURCE    column.two     VARCHAR2
+             *
+             */
+
+            --
+            -- Select data from the new columns.
+            SELECT
+                "column one",
+                "column.two"
+            FROM
+                alpha_source
+            WHERE
+                ROWNUM <= 10
+                ;
+
+
+            quit
+

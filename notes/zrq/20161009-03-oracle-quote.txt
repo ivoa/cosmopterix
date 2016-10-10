@@ -1,0 +1,103 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+    
+# -----------------------------------------------------
+# Run our query tests.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+
+    docker exec \
+        --tty \
+        --interactive \
+        'oracle' \
+            sqlplus
+
+            -- Enter user-name : system
+            -- Enter password  : oracle
+
+            --
+            -- Test query - short names
+            SELECT
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                ROWNUM <= 10
+                ;
+
+            --
+            -- Test query - fully qualified names
+            SELECT
+                system.alpha_source.ra,
+                system.alpha_source.decl
+            FROM
+                system.alpha_source
+            WHERE
+                ROWNUM <= 10
+                ;
+
+            --
+            -- Test query - quoted short names
+            SELECT
+                "RA",
+                "DECL"
+                "column one",
+                "column.two"
+            FROM
+                "ALPHA_SOURCE"
+            WHERE
+                ROWNUM <= 10
+                ;
+
+            --
+            -- Test query - fully qualified, fully quoted names
+            SELECT
+                "ALPHA_SOURCE"."RA",
+                "ALPHA_SOURCE"."DECL",
+                "ALPHA_SOURCE"."column one",
+                "ALPHA_SOURCE"."column.two"
+            FROM
+                "SYSTEM"."ALPHA_SOURCE"
+            WHERE
+                ROWNUM <= 10
+                ;
+
+            --
+            -- Test query - mixed qualified, mixed quoted names
+            SELECT
+                ALPHA_SOURCE."RA",
+                "ALPHA_SOURCE".DECL,
+                ALPHA_SOURCE."column one",
+                "ALPHA_SOURCE"."column.two"
+            FROM
+                "SYSTEM"."ALPHA_SOURCE"
+            WHERE
+                ROWNUM <= 10
+                ;
+
+        exit
+    exit
+
+
+
