@@ -7,6 +7,8 @@ The framework makes it easy to compare the same set of SQL queries across all of
 
 Cross platform SQL tests :
 * [OFFSET and LIMIT](../../wiki/OFFSET-and-LIMIT)
+* [MOD for -ve numbers](../../wiki/MOD-for-negative-numbers)
+* [Unnamed-columns](../../wiki/Unnamed-columns)
 
 Working containers for :
 * [PostgreSQL](docker/pgsql)
@@ -28,6 +30,8 @@ Plans for :
 * [SpiderEngine](https://mariadb.com/kb/en/mariadb/spider-storage-engine-overview/)
 * [Oracle TimesTen](http://www.oracle.com/technetwork/database/database-technologies/timesten/overview/index.html)
 
-The research leading to these results has received funding from the following sources :
-* The European Community's Seventh Framework Programme (FP7-SPACE-2013-1) under grant agreement n°606740.
-* 
+The work involved in this project has received funding from the following sources :
+* The European Community's Seventh Framework Programme (FP7-SPACE-2013-1) under grant agreement n°606740, 
+* The European Commission Framework Programme Horizon 2020 Research and Innovation action under grant agreement n°653477
+* The UK Science and Technology Facilities Council under grant numbers ST/M001989/1, ST/M007812/1, and ST/N005813/1
+ 
