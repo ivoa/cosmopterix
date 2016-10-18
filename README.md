@@ -7,6 +7,8 @@ The framework makes it easy to compare the same set of SQL queries across all of
 
 Cross platform SQL tests :
 * [OFFSET and LIMIT](../../wiki/OFFSET-and-LIMIT)
+* [MOD for -ve numbers](../../wiki/MOD-for-negative-numbers)
+* [Unnamed-columns](../../wiki/Unnamed-columns)
 
 Working containers for :
 * [PostgreSQL](docker/pgsql)
