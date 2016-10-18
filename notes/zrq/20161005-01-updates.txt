@@ -320,16 +320,16 @@ waitlog()
 
     docker run \
         --detach \
-        --name 'derby' \
+        --name 'hsqldb' \
         "cosmopterix/hsqldb-test:2.3-1.1"
 
-    waitlog 'derby' '^OKGO'
+    waitlog 'hsqldb' '^OKGO'
     sleep 1
 
     docker exec \
         --tty \
         --interactive \
-        'derby' \
+        'hsqldb' \
         hsqldb-client
 
             SELECT id, ra, decl FROM alpha_source ;
@@ -366,15 +366,55 @@ waitlog()
         \q
 
 # -------------------------------------------------------------------------------------------
-# Test our SQLServer container.
+# Tag our images as latest.
 #[user@desktop]
 
-    ....
+    docker tag "cosmopterix/fedora:23-1.1"          "cosmopterix/fedora:latest"
+    docker tag "cosmopterix/java:8-1.1"             "cosmopterix/java:latest"
+    docker tag "cosmopterix/pgsql-base:9.4-1.1"     "cosmopterix/pgsql-base:latest"
+    docker tag "cosmopterix/pgsql-test:9.4-1.1"     "cosmopterix/pgsql-test:latest"
+    docker tag "cosmopterix/mysql-base:5.6-1.1"     "cosmopterix/mysql-base:latest"
+    docker tag "cosmopterix/mysql-test:5.6-1.1"     "cosmopterix/mysql-test:latest"
+    docker tag "cosmopterix/mariadb-base:10.0-1.1"  "cosmopterix/mariadb-base:latest"
+    docker tag "cosmopterix/mariadb-test:10.0-1.1"  "cosmopterix/mariadb-test:latest"
+    docker tag "cosmopterix/derby-base:10.12-1.1"   "cosmopterix/derby-base:latest"
+    docker tag "cosmopterix/derby-test:10.12-1.1"   "cosmopterix/derby-test:latest"
+    docker tag "cosmopterix/hsqldb-base:2.3-1.1"    "cosmopterix/hsqldb-base:latest"
+    docker tag "cosmopterix/hsqldb-test:2.3-1.1"    "cosmopterix/hsqldb-test:latest"
 
 # -------------------------------------------------------------------------------------------
-# Test our Oracle container.
+# Push our images to the Docker repository.
 #[user@desktop]
 
-    ....
-    
+    docker login
+
+        Username: ....
+        Password: ....
+        Login Succeeded
+
+    docker push "cosmopterix/fedora:23-1.1"
+    docker push "cosmopterix/java:8-1.1"
+    docker push "cosmopterix/pgsql-base:9.4-1.1"
+    docker push "cosmopterix/pgsql-test:9.4-1.1"
+    docker push "cosmopterix/mysql-base:5.6-1.1"
+    docker push "cosmopterix/mysql-test:5.6-1.1"
+    docker push "cosmopterix/mariadb-base:10.0-1.1"
+    docker push "cosmopterix/mariadb-test:10.0-1.1"
+    docker push "cosmopterix/derby-base:10.12-1.1"
+    docker push "cosmopterix/derby-test:10.12-1.1"
+    docker push "cosmopterix/hsqldb-base:2.3-1.1"
+    docker push "cosmopterix/hsqldb-test:2.3-1.1"
+
+    docker push "cosmopterix/fedora:latest"
+    docker push "cosmopterix/java:latest"
+    docker push "cosmopterix/pgsql-base:latest"
+    docker push "cosmopterix/pgsql-test:latest"
+    docker push "cosmopterix/mysql-base:latest"
+    docker push "cosmopterix/mysql-test:latest"
+    docker push "cosmopterix/mariadb-base:latest"
+    docker push "cosmopterix/mariadb-test:latest"
+    docker push "cosmopterix/derby-base:latest"
+    docker push "cosmopterix/derby-test:latest"
+    docker push "cosmopterix/hsqldb-base:latest"
+    docker push "cosmopterix/hsqldb-test:latest"
 

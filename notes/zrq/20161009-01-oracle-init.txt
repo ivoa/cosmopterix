@@ -298,11 +298,6 @@ EOF
 # Run our Oracle container.
 #[user@virtual]
 
-            datadir=$(mktemp -d)
-            cp "oracle/oracle-xe/11.2/sql/alpha-source.sql"  "${datadir}/01-alpha.sql"
-            cp "data/alpha-source-data.sql"                  "${datadir}/02-data.sql"
-            cp "oracle/oracle-xe/11.2/sql/bit-functions.sql" "${datadir}/03-bits.sql"
-
     docker run \
         --detach \
         --name 'oracle' \
