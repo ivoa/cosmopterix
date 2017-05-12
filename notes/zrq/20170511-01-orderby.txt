@@ -1,0 +1,732 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -----------------------------------------------------
+# Create a new VM.
+#[user@trop]
+
+    createvm
+
+        INFO : Node name [Araybwyn]
+        INFO : Base name [fedora-25-docker-32G-20170331.qcow]
+        INFO : Base path [/var/lib/libvirt/images/base/fedora-25-docker-32G-20170331.qcow]
+        INFO : Disc name [Araybwyn.qcow]
+        INFO : Disc size [32GiB]
+
+# -----------------------------------------------------
+# Fix the user keys issue.
+#[user@trop]
+
+    ssh root@Araybwyn
+
+        rm /home/Stevedore/.ssh
+
+        cp -r \
+            ${HOME}/.ssh
+            /home/Stevedore/.ssh
+
+        chown \
+            Stevedore:Stevedore
+            /home/Stevedore/.ssh
+
+        exit
+
+# -----------------------------------------------------
+# Login as Docker user.
+#[user@trop]
+
+    ssh Stevedore@Araybwyn
+
+# -------------------------------------------------------------------------------------------
+# Create our 'waitlog' function.
+#[Stevedore@virtual]
+
+waitlog()
+    {
+    local name=${1:?Name required}
+    local text=${2:?Text required}
+    sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
+    }
+
+# -------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------
+# Start our PostgreSQL container.
+#[Stevedore@virtual]
+
+    docker run \
+        --detach \
+        --name 'pgsql' \
+        "cosmopterix/pgsql-test"
+
+    waitlog 'pgsql' '^OKGO'
+    sleep 1
+
+# -------------------------------------------------------------------------------------------
+# Test our PostgreSQL container.
+#[Stevedore@virtual]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'pgsql' \
+        pgsql-client
+
+            \pset pager off
+
+            --
+            -- Test queries ...
+            --
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------
+# Start our MySQL container.
+#[Stevedore@virtual]
+
+    docker run \
+        --detach \
+        --name 'mysql' \
+        "cosmopterix/mysql-test"
+
+    waitlog 'mysql' '^OKGO'
+    sleep 1
+
+# -------------------------------------------------------------------------------------------
+# Test our MySQL container.
+#[Stevedore@virtual]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mysql' \
+        mysql-client
+
+            --
+            -- Test queries ...
+            --
+
+        \q
+
+
+
+
+
+
+
+# -------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------
+# Test queries ...
+#[Stevedore@virtual]
+
+        --
+        -- no sort
+        -- no group
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+                ;
+
+        --
+        -- sort field in select list
+        -- no group
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id
+                ;
+
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id ASC
+                ;
+
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id DESC
+                ;
+
+        --
+        -- sort field not in select list
+        -- no group
+        -- PASS pgsql, mysql, oracle
+ 
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id DESC
+                ;
+
+        --
+        -- sort expression in select list
+        -- no group
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                mod(id,4)
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                mod(id,4)
+                ;
+
+        --
+        -- sort expression not in select list
+        -- no group
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                mod(id,4)
+                ;
+
+        --
+        -- sort expression field not in select list
+        -- no group
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                mod(id,4)
+                ;
+
+        --
+        -- no sort
+        -- group field in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                id,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+                ;
+
+        --
+        -- no sort
+        -- group field not in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+                ;
+
+        --
+        -- no sort
+        -- group expression in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                mod(id,4),
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+                ;
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+                ;
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- aggregate in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                count(id),
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+                ;
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- aggregate expression in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                count(id) + 1,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+                ;
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- different expression in select list
+        -- FAIL pgsql, oracle
+        -- PASS mysql
+
+            SELECT
+                id + 1,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+                ;
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- similar expression in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                (mod(id,4)),
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+                ;
+
+            SELECT
+                (mod(id,4)) + 0,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+                ;
+
+            SELECT
+                1 * (mod(id,4)),
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+                ;
+
+        --
+        -- no sort
+        -- group expression in select list
+        -- similar expression in select list
+        -- PASS mysql, oracle
+
+            SELECT
+                mod(id,4),
+                (2 * (mod(id,4)))/2,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+                ;
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- similar expression in select list
+        -- PASS mysql, oracle
+
+            SELECT
+                (2 * (mod(id,4)))/2,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+                ;
+
+
+        --
+        -- sort and group on the same field
+        -- sort field aggregate in select list
+        -- group field in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                id,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+            ORDER BY
+                id
+                ;
+
+        --
+        -- sort and group on the same field
+        -- sort field not in select list
+        -- group field not in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+            ORDER BY
+                id
+                ;
+
+        --
+        -- sort and group on the same expression
+        -- sort and group expression in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                mod(id,4),
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+            ORDER BY
+                mod(id,4)
+                ;
+
+        --
+        -- sort and group on the same expression
+        -- sort and group expression not in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+            ORDER BY
+                mod(id,4)
+                ;
+
+        --
+        -- sort and group on the same expression
+        -- sort and group expression not in select list
+        -- aggregate in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                count(id),
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+            ORDER BY
+                mod(id,4)
+                ;
+
+        --
+        -- sort and group on the same expression
+        -- sort and group expression not in select list
+        -- aggregate expression in select list
+        -- PASS pgsql, mysql, oracle
+
+            SELECT
+                count(id) + 1,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+            ORDER BY
+                mod(id,4)
+                ;
+
+        --
+        -- sort and group on the same expression
+        -- sort and group expression not in select list
+        -- different expression in select list
+        -- FAIL pgsql, oracle
+        -- PASS mysql
+        
+            SELECT
+                id + 1,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                mod(id,4)
+            ORDER BY
+                mod(id,4)
+                ;
+
+
+        --
+        -- sort and group on different fields
+        -- sort field aggregate in select list
+        -- group field in select list
+        -- PASS pgsql, mysql
+        -- FAIL oracle
+
+            SELECT
+                id,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+            ORDER BY
+                ra
+                ;
+
+        --
+        -- sort and group on different fields
+        -- sort field aggregate in select list
+        -- group field not in select list
+        -- PASS pgsql, mysql
+        -- FAIL oracle
+
+            SELECT
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+            ORDER BY
+                ra
+                ;
+
+        --
+        -- sort and group on different fields
+        -- sort field aggregate not in select list
+        -- group field in select list
+        -- PASS pgsql, mysql
+        -- FAIL oracle
+
+            SELECT
+                id,
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+            ORDER BY
+                ra
+                ;
+
+
+
+
+    
+
+
+
+
+
