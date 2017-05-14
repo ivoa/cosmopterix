@@ -702,6 +702,7 @@ waitlog()
         --
         -- sort and group on different fields
         -- sort field aggregate not in select list
+        
         -- group field in select list
         -- PASS pgsql, mysql
         -- FAIL oracle

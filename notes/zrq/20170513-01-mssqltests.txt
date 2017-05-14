@@ -1,0 +1,109 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+
+# -----------------------------------------------------
+# Build our SQL Server containers.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            docker build \
+                --tag "cosmopterix/mssql:ctp-2.0" \
+                mssql-base/ctp-2.0
+
+            docker build \
+                --tag "cosmopterix/mssql-test:ctp-2.0" \
+                mssql/test
+    
+        popd
+    popd
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# -------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------
+# Start our SQLserver container.
+# https://docs.microsoft.com/en-us/sql/linux/sql-server-linux-setup-docker
+#[Stevedore@virtual]
+
+    docker run \
+        --name 'sqlserver' \
+        --env 'ACCEPT_EULA=Y' \
+        --env 'SA_PASSWORD=91.2-EightyOnePointSix' \
+        -d \
+        microsoft/mssql-server-linux
+
+# -------------------------------------------------------------------------------------------
+# Login to our SQLserver container.
+#[Stevedore@virtual]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'sqlserver' \
+        bash
+
+# -------------------------------------------------------------------------------------------
+# Run the SQLserver client.
+# https://docs.microsoft.com/en-us/sql/linux/sql-server-linux-setup-docker
+#[Stevedore@virtual]
+        
+        /opt/mssql-tools/bin/sqlcmd \
+            -S localhost \
+            -U SA \
+            -P '91.2-EightyOnePointSix'
+
+
+
+
+    #
+    # List the local databases.
+    SELECT Name from sys.Databases;
+    GO
+
+    #
+    # Create a test database.
+    CREATE DATABASE testdb;
+    GO
+
+    USE testdb;
+    GO
+
