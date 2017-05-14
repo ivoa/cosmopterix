@@ -12,7 +12,7 @@
 #     but WITHOUT ANY WARRANTY; without even the implied warranty of
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details.
-#  
+#
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #   </meta:licence>
@@ -31,45 +31,27 @@
         pushd docker
 
             docker build \
-                --tag "cosmopterix/mssql:ctp-2.0" \
-                mssql-base/ctp-2.0
+                --tag "cosmopterix/mssql-base:ctp-2.0" \
+                mssql/base
 
             docker build \
                 --tag "cosmopterix/mssql-test:ctp-2.0" \
                 mssql/test
-    
+
         popd
     popd
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # -------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------
 # Start our SQLserver container.
-# https://docs.microsoft.com/en-us/sql/linux/sql-server-linux-setup-docker
 #[Stevedore@virtual]
 
     docker run \
-        --name 'sqlserver' \
+        --name 'mssql' \
         --env 'ACCEPT_EULA=Y' \
         --env 'SA_PASSWORD=91.2-EightyOnePointSix' \
         -d \
-        microsoft/mssql-server-linux
+        'cosmopterix/mssql-test:ctp-2.0'
 
 # -------------------------------------------------------------------------------------------
 # Login to our SQLserver container.
@@ -78,32 +60,719 @@
     docker exec \
         --tty \
         --interactive \
-        'sqlserver' \
+        'mssql' \
         bash
+
+
+
+# Alternative command line tool ?
+# https://github.com/bmc/sqlcmd/blob/master/doc/users_guide.rst
+# https://github.com/bmc/sqlcmd
+# http://software.clapper.org/sqlshell/
+
+# LocaDB development platform
+# https://docs.microsoft.com/en-us/sql/sql-server/editions-and-components-of-sql-server-2016
+# https://docs.microsoft.com/en-us/sql/database-engine/configure-windows/sql-server-2016-express-localdb
+# https://docs.microsoft.com/en-us/sql/tools/sqllocaldb-utility
 
 # -------------------------------------------------------------------------------------------
 # Run the SQLserver client.
 # https://docs.microsoft.com/en-us/sql/linux/sql-server-linux-setup-docker
-#[Stevedore@virtual]
-        
-        /opt/mssql-tools/bin/sqlcmd \
-            -S localhost \
-            -U SA \
-            -P '91.2-EightyOnePointSix'
+# https://docs.microsoft.com/en-us/sql/tools/sqlcmd-utility
+#[user@container]
+
+        PATH=${PATH}:/opt/mssql-tools/bin
+
+sqlcmd \
+    -S localhost \
+    -U SA \
+    -P '91.2-EightyOnePointSix'
+
+            --
+            -- Check the server version.
+            SELECT @@VERSION;
+            go
+
+                Microsoft SQL Server vNext (CTP2.0) - 14.0.500.272 (X64)
+                Apr 13 2017 11:44:40
+                Copyright (C) 2017 Microsoft Corporation. All rights reserved.
+                Developer Edition (64-bit) on Linux (Ubuntu 16.04.2 LTS)
+
+            --
+            -- List the local databases.
+            SELECT Name from sys.Databases;
+            go
+
+            --
+            -- Create a test database.
+            CREATE DATABASE testdb;
+            go
+
+            --
+            -- Use the test database.
+            USE testdb;
+            go
+
+            --
+            -- Load our test data.
+            :r /database.init/alpha-source.sql
+            go
+
+# -------------------------------------------------------------------------------------------
+# Test queries ..
+
+USE testdb;
+go
+
+:r test-adql.sql
+go
 
 
 
 
-    #
-    # List the local databases.
-    SELECT Name from sys.Databases;
-    GO
+        --
+        -- no sort
+        -- no group
+        -- PASS pgsql, mysql, oracle
+:!! echo 'query 1'
 
-    #
-    # Create a test database.
-    CREATE DATABASE testdb;
-    GO
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+                ;
+go
 
-    USE testdb;
-    GO
+        --
+        -- sort field in select list
+        -- no group
+        -- PASS pgsql, mysql, oracle
+:!! echo 'query 2'
+
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id
+                ;
+go
+
+:!! echo 'query 3'
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id ASC
+                ;
+go
+
+:!! echo 'query 4'
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id DESC
+                ;
+go
+
+        --
+        -- sort field not in select list
+        -- no group
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 4'
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id DESC
+                ;
+go
+
+        --
+        -- sort expression in select list
+        -- no group
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 5'
+            SELECT
+                id % 4
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id % 4
+                ;
+go
+
+        --
+        -- sort expression not in select list
+        -- no group
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 6'
+            SELECT
+                id,
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id % 4
+                ;
+go
+
+        --
+        -- sort expression field not in select list
+        -- no group
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 7'
+            SELECT
+                ra,
+                decl
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            ORDER BY
+                id % 4
+                ;
+go
+
+        --
+        -- no sort
+        -- group field in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 7'
+            SELECT
+                id,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+                ;
+go
+
+        --
+        -- no sort
+        -- group field not in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 8'
+            SELECT
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+                ;
+go
+
+        --
+        -- no sort
+        -- group expression in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 9'
+            SELECT
+                id % 4,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+                ;
+go
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 10'
+            SELECT
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+                ;
+go
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- aggregate in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 11'
+            SELECT
+                count(id),
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+                ;
+go
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- aggregate expression in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 12'
+            SELECT
+                count(id) + 1,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+                ;
+go
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- different expression in select list
+        -- PASS mysql
+        -- FAIL pgsql, mssql, oracle
+
+:!! echo 'query 13'
+            SELECT
+                id + 1,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+                ;
+go
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- similar expression in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 14'
+            SELECT
+                (id % 4),
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+                ;
+go
+
+:!! echo 'query 15'
+            SELECT
+                (id % 4) + 0,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+                ;
+go
+
+:!! echo 'query 16'
+            SELECT
+                1 * (id % 4),
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+                ;
+go
+
+        --
+        -- no sort
+        -- group expression in select list
+        -- similar expression in select list
+        -- PASS mysql, oracle
+
+:!! echo 'query 17'
+            SELECT
+                id % 4,
+                (2 * (id % 4))/2,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+                ;
+go
+
+        --
+        -- no sort
+        -- group expression not in select list
+        -- similar expression in select list
+        -- PASS mysql, oracle
+
+:!! echo 'query 18'
+            SELECT
+                (2 * (id % 4))/2,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+                ;
+go
+
+        --
+        -- sort and group on the same field
+        -- sort field aggregate in select list
+        -- group field in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 19'
+            SELECT
+                id,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+            ORDER BY
+                id
+                ;
+go
+
+        --
+        -- sort and group on the same field
+        -- sort field not in select list
+        -- group field not in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 20'
+            SELECT
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+            ORDER BY
+                id
+                ;
+go
+
+        --
+        -- sort and group on the same expression
+        -- sort and group expression in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 21'
+            SELECT
+                id % 4,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+            ORDER BY
+                id % 4
+                ;
+go
+
+        --
+        -- sort and group on the same expression
+        -- sort and group expression not in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 22'
+            SELECT
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+            ORDER BY
+                id % 4
+                ;
+go
+
+        --
+        -- sort and group on the same expression
+        -- sort and group expression not in select list
+        -- aggregate in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 23'
+            SELECT
+                count(id),
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+            ORDER BY
+                id % 4
+                ;
+go
+
+        --
+        -- sort and group on the same expression
+        -- sort and group expression not in select list
+        -- aggregate expression in select list
+        -- PASS pgsql, mysql, oracle
+
+:!! echo 'query 24'
+            SELECT
+                count(id) + 1,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+            ORDER BY
+                id % 4
+                ;
+go
+
+        --
+        -- sort and group on the same expression
+        -- sort and group expression not in select list
+        -- different expression in select list
+        -- PASS mysql
+        -- FAIL pgsql, mssql, oracle
+
+:!! echo 'query 25'
+            SELECT
+                id + 1,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id % 4
+            ORDER BY
+                id % 4
+                ;
+go
+
+        --
+        -- sort and group on different fields
+        -- sort field aggregate in select list
+        -- group field in select list
+        -- PASS pgsql, mysql
+        -- FAIL mssql, oracle
+
+:!! echo 'query 26'
+            SELECT
+                id,
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+            ORDER BY
+                ra
+                ;
+go
+
+        --
+        -- sort and group on different fields
+        -- sort field aggregate in select list
+        -- group field not in select list
+        -- PASS pgsql, mysql
+        -- FAIL mssql, oracle
+
+:!! echo 'query 27'
+            SELECT
+                count(ra),
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+            ORDER BY
+                ra
+                ;
+go
+
+        --
+        -- sort and group on different fields
+        -- sort field aggregate not in select list
+
+        -- group field in select list
+        -- PASS pgsql, mysql
+        -- FAIL mssql, oracle
+
+:!! echo 'query 28'
+            SELECT
+                id,
+                count(decl)
+            FROM
+                alpha_source
+            WHERE
+                id >= 10
+            AND
+                id < 20
+            GROUP BY
+                id
+            ORDER BY
+                ra
+                ;
+go
+
+
+
+
 
