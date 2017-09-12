@@ -1,0 +1,395 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2017, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -----------------------------------------------------
+# Update our ADQL document source.
+#[user@trop]
+
+    createvm 
+
+        INFO : Node name [Greand]
+        INFO : Base name [fedora-25-docker-16G-20170713.qcow]
+        INFO : Base path [/var/lib/libvirt/images/base/fedora-25-docker-16G-20170713.qcow]
+        INFO : Disc name [Greand.qcow]
+        INFO : Disc size [16GiB]
+
+# -----------------------------------------------------
+# Run our PostgreSQL client and server.
+#[user@virtual]
+
+    docker run \
+        --detach \
+        --name 'pgsql-server' \
+       'cosmopterix/pgsql-test'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'pgsql-server' \
+        'pgsql-client'
+
+
+    --
+    -- SELECT from subquery
+    SELECT
+        id
+    FROM
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        ) AS sample
+    WHERE
+        id >= 5
+
+    --
+    -- SELECT IN subquery
+    SELECT
+        id
+    FROM
+        alpha_source
+    WHERE
+        id >= 5
+    AND
+        id IN (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        )
+
+    --
+    -- SELECT FROM WITH subquery
+    WITH sample AS
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        )
+    SELECT
+        id
+    FROM
+        sample
+    WHERE
+        id >= 5
+
+    --
+    -- IN WITH subquery
+    WITH sample AS
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        )
+    SELECT
+        id
+    FROM 
+        alpha_source
+    WHERE
+        alpha_source.id IN 
+            (
+            SELECT
+                id
+            FROM
+                sample
+            WHERE
+                ID >= 5
+            )
+
+    --
+    -- WHERE equals FROM (WITH sample)
+    WITH sample AS
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        )
+    SELECT
+        alpha_source.id
+    FROM
+        alpha_source,
+        (
+        SELECT
+            id
+        FROM
+            sample
+        WHERE
+            ID >= 5
+        ) AS subsample
+    WHERE
+        alpha_source.id = subsample.id
+
+# -----------------------------------------------------
+# Run our MySQL client and server.
+#[user@virtual]
+
+    docker run \
+        --detach \
+        --name 'mysql-server' \
+       'cosmopterix/mysql-test'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mysql-server' \
+        'mysql-client'
+
+
+Not available in current version (5.6.33).
+Possibly available in next major version (8.x).
+http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes/
+http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes-part-two-how-to-generate-series/
+
+Alternative - use a VIEW ?
+http://guilhembichot.blogspot.co.uk/2013/11/with-recursive-and-mysql.html
+
+New version in development (8.x)
+https://dev.mysql.com/downloads/file/?id=469632
+https://dev.mysql.com/doc/refman/8.0/en/linux-installation-yum-repo.html
+https://repo.mysql.com//mysql57-community-release-fc25-10.noarch.rpm
+
+https://dev.mysql.com/doc/refman/8.0/en/with.html
+https://stackoverflow.com/questions/324935/mysql-with-clause
+http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes/
+http://guilhembichot.blogspot.co.uk/2013/11/with-recursive-and-mysql.html
+http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes/
+http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes-part-two-how-to-generate-series/
+
+    --
+    -- SELECT from VIEW
+    CREATE VIEW sample AS
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        );
+
+    SELECT
+        id
+    FROM
+        sample
+    WHERE
+        id < 8
+        ;
+        
+    DROP VIEW sample ;
+
+    --
+    -- IN (SELECT from VIEW)
+
+    CREATE VIEW sample AS
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        );
+
+    SELECT
+        id
+    FROM 
+        alpha_source
+    WHERE
+        alpha_source.id IN 
+            (
+            SELECT
+                id
+            FROM
+                sample
+            WHERE
+                ID < 5
+            )
+        ;
+
+    DROP VIEW sample ;
+
+    --
+    -- FROM (SELECT from WITH)
+
+    CREATE VIEW sample AS
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        );
+
+    SELECT
+        alpha_source.id
+    FROM
+        alpha_source,
+        (
+        SELECT
+            id
+        FROM
+            sample
+        WHERE
+            ID < 5
+        ) AS subsample
+    WHERE
+        alpha_source.id = subsample.id
+        ;
+
+    DROP VIEW sample ;
+
+# -----------------------------------------------------
+# Run our MariaDB client and server.
+#[user@virtual]
+
+    docker run \
+        --detach \
+        --name 'mariadb-server' \
+       'cosmopterix/mariadb-test'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mariadb-server' \
+        'mariadb-client'
+
+
+
+    --
+    -- SELECT from subquery
+    SELECT
+        id
+    FROM
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        ) AS sample
+    WHERE
+        id >= 5
+
+    --
+    -- SELECT IN subquery
+    SELECT
+        id
+    FROM
+        alpha_source
+    WHERE
+        id >= 5
+    AND
+        id IN (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        )
+
+    --
+    -- SELECT FROM WITH subquery
+    WITH sample AS
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        )
+    SELECT
+        id
+    FROM
+        sample
+    WHERE
+        id >= 5
+
+    --
+    -- IN WITH subquery
+    WITH sample AS
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        )
+    SELECT
+        id
+    FROM 
+        alpha_source
+    WHERE
+        alpha_source.id IN 
+            (
+            SELECT
+                id
+            FROM
+                sample
+            WHERE
+                ID >= 5
+            )
+
+    --
+    -- WHERE equals FROM (WITH sample)
+    WITH sample AS
+        (
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            ID < 10
+        )
+    SELECT
+        alpha_source.id
+    FROM
+        alpha_source,
+        (
+        SELECT
+            id
+        FROM
+            sample
+        WHERE
+            ID >= 5
+        ) AS subsample
+    WHERE
+        alpha_source.id = subsample.id
+
