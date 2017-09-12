@@ -24,12 +24,36 @@ set -euo pipefail
 IFS=$'\n\t'
 
 #
+# Install the MariaDB yum repository.
+echo ""
+echo "Configuring MariaDB repository"
+
+repofile=$(mktemp)
+cat > "${repofile:?}" << EOF
+# MariaDB ${mariaversion} Fedora repository
+# http://downloads.mariadb.org/mariadb/repositories/
+[mariadb]
+name = MariaDB ${mariaversion:?}
+baseurl = http://yum.mariadb.org/${mariaversion:?}/fedora26-amd64
+gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+EOF
+
+echo ""
+echo "Installing MariaDB repository"
+dnf config-manager \
+    --add-repo \
+    "${repofile:?}"
+
+rm "${repofile:?}"
+
+#
 # Install MariaDB server
 echo ""
-echo "Installing MariaDB"
+echo "Installing MariaDB ${mariaversion}"
 dnf install -y \
     hostname \
-    mariadb-${mariadbversion} \
-    mariadb-server-${mariadbversion} \
-    mariadb-common-${mariadbversion}
+    MariaDB-${mariaversion} \
+    MariaDB-server-${mariaversion} \
+    MariaDB-common-${mariaversion}
 

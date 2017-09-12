@@ -20,7 +20,7 @@ MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 
 #
 # MariaDB version
-ENV mariadbversion 1:10.0.27
+ENV mariaversion 10.2
 
 #
 # Default port number.
