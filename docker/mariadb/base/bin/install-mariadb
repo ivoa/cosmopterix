@@ -28,7 +28,7 @@ IFS=$'\n\t'
 echo ""
 echo "Configuring MariaDB repository"
 
-repofile=$(mktemp)
+repofile=/tmp/mariadb.repo
 cat > "${repofile:?}" << EOF
 # MariaDB ${mariaversion} Fedora repository
 # http://downloads.mariadb.org/mariadb/repositories/
