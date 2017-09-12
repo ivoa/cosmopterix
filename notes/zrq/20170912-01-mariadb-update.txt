@@ -67,7 +67,7 @@ EOF
     
 # -----------------------------------------------------
 # Remove existing containers and images.
-#[user@desktop]
+#[user@virtual]
 
     docker rm -v $(docker stop $(docker ps -aq))
 
@@ -75,7 +75,7 @@ EOF
 
 # -----------------------------------------------------
 # Build our container images.
-#[user@desktop]
+#[user@virtual]
 
     source "${HOME:?}/cosmopterix.settings"
     pushd "${COSMOPTERIX_CODE:?}"
@@ -88,37 +88,16 @@ EOF
                 fedora/26
 
             docker build \
-                --tag "cosmopterix/mariadb:10.2" \
+                --tag "cosmopterix/mariadb:10.2-1.0" \
                 --tag "cosmopterix/mariadb:latest" \
-                mariadb
-
-
-
-            docker build \
-                --tag "cosmopterix/pgsql:9.4-1.0" \
-                --tag "cosmopterix/pgsql:latest" \
-                pgsql
+                --tag "cosmopterix/mariadb-base:10.2-1.0" \
+                --tag "cosmopterix/mariadb-base:latest" \
+                mariadb/base
 
             docker build \
-                --tag "cosmopterix/mysql:5.6-1.0" \
-                --tag "cosmopterix/mysql:latest" \
-                mysql
-
-
-            docker build \
-                --tag "cosmopterix/java:8-1.0" \
-                --tag "cosmopterix/java:latest" \
-                java/8
-
-            docker build \
-                --tag "cosmopterix/derby:10.12-1.0" \
-                --tag "cosmopterix/derby:latest" \
-                derby
-
-            docker build \
-                --tag "cosmopterix/hsqldb:2.3-1.0" \
-                --tag "cosmopterix/hsqldb:latest" \
-                hsqldb
+                --tag "cosmopterix/mariadb-test:10.2-1.0" \
+                --tag "cosmopterix/mariadb-test:latest" \
+                mariadb/test
 
         popd
     popd
@@ -127,11 +106,71 @@ EOF
 # Create our 'waitlog' function.
 #[user@desktop]
 
-waitlog()
-    {
-    local name=${1:?Name required}
-    local text=${2:?Text required}
-    sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
-    }
+    waitlog()
+        {
+        local name=${1:?Name required}
+        local text=${2:?Text required}
+        sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
+        }
 
+
+# -------------------------------------------------------------------------------------------
+# Test our MariaDB container.
+#[user@desktop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+        
+            datadir=$(mktemp -d)
+            cp "mariadb/sql/alpha-source.sql" "${datadir}/001.sql"
+            cp "data/alpha-source-data.sql"   "${datadir}/002.sql"
+
+            docker run \
+                --detach \
+                --name "${dockname:?}" \
+                --volume "${datadir}:/database.init/" \
+                "cosmopterix/mariadb:10.0-1.0"
+
+            waitlog "${dockname:?}" '^Init'
+
+            docker exec \
+                --tty \
+                --interactive \
+                "${dockname:?}" \
+                mysql-client
+
+                -- MariaDB :
+                --  [ORDER BY <sort_column>] is separate
+                --  [LIMIT <row_count>] is separate
+                --  [OFFSET <row_offset>] requires [LIMIT <row_count>]
+
+                SELECT id, ra, decl FROM alpha_source ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10,10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source LIMIT 4294967295 OFFSET 10 ;
+
+                --
+
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 4294967295 OFFSET 10 ;
+
+                -- SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT 10,10 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT  0 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source LIMIT -1 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT  0 OFFSET 10 ;
+                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT -1 OFFSET 10 ;
+
+            \q
+
+        popd
+    popd
 
