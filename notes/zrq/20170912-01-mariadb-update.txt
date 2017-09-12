@@ -104,7 +104,7 @@ EOF
 
 # -------------------------------------------------------------------------------------------
 # Create our 'waitlog' function.
-#[user@desktop]
+#[user@virtual]
 
     waitlog()
         {
@@ -113,64 +113,230 @@ EOF
         sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
         }
 
-
 # -------------------------------------------------------------------------------------------
 # Test our MariaDB container.
-#[user@desktop]
+#[user@virtual]
 
-    source "${HOME:?}/cosmopterix.settings"
-    pushd "${COSMOPTERIX_CODE:?}"
+    docker run \
+        --detach \
+        --name 'mariadb-test' \
+       'cosmopterix/mariadb-test:10.2-1.0'
 
-        pushd docker
-        
-            datadir=$(mktemp -d)
-            cp "mariadb/sql/alpha-source.sql" "${datadir}/001.sql"
-            cp "data/alpha-source-data.sql"   "${datadir}/002.sql"
+    waitlog 'mariadb-test' 'OKGO'
 
-            docker run \
-                --detach \
-                --name "${dockname:?}" \
-                --volume "${datadir}:/database.init/" \
-                "cosmopterix/mariadb:10.0-1.0"
+    docker exec \
+        --tty \
+        --interactive \
+        'mariadb-test' \
+        'mariadb-client'
 
-            waitlog "${dockname:?}" '^Init'
+            SELECT version() ;
 
-            docker exec \
-                --tty \
-                --interactive \
-                "${dockname:?}" \
-                mysql-client
+                +----------------+
+                | version()      |
+                +----------------+
+                | 10.2.8-MariaDB |
+                +----------------+
+                
+            --
+            -- SELECT FROM (subquery)
+            SELECT
+                id
+            FROM
+                (
+                SELECT
+                    id
+                FROM
+                    alpha_source
+                WHERE
+                    ID < 10
+                ) AS sample
+            WHERE
+                id >= 5
+            ;
 
-                -- MariaDB :
-                --  [ORDER BY <sort_column>] is separate
-                --  [LIMIT <row_count>] is separate
-                --  [OFFSET <row_offset>] requires [LIMIT <row_count>]
+            --
+            -- SELECT FROM table WHERE IN (subquery)
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                id >= 5
+            AND
+                id IN (
+                SELECT
+                    id
+                FROM
+                    alpha_source
+                WHERE
+                    ID < 10
+                )
+            ;
 
-                SELECT id, ra, decl FROM alpha_source ;
-                SELECT id, ra, decl FROM alpha_source LIMIT 10 ;
-                SELECT id, ra, decl FROM alpha_source LIMIT 10,10 ;
-                SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
-                SELECT id, ra, decl FROM alpha_source LIMIT 4294967295 OFFSET 10 ;
+            --
+            -- WITH (sample) SELECT FROM sample
+            WITH sample AS
+                (
+                SELECT
+                    id
+                FROM
+                    alpha_source
+                WHERE
+                    ID < 10
+                )
+            SELECT
+                id
+            FROM
+                sample
+            WHERE
+                id >= 5
+            ;
 
-                --
+            --
+            -- WITH (sample) SELECT FROM table WHERE IN (SELECT FROM sample)
+            WITH sample AS
+                (
+                SELECT
+                    id
+                FROM
+                    alpha_source
+                WHERE
+                    ID < 10
+                )
+            SELECT
+                id
+            FROM 
+                alpha_source
+            WHERE
+                alpha_source.id IN 
+                    (
+                    SELECT
+                        id
+                    FROM
+                        sample
+                    WHERE
+                        ID >= 5
+                    )
+            ;
 
-                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC ;
-                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 ;
-                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 ;
-                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
-                SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 4294967295 OFFSET 10 ;
+            --
+            -- WITH (sample) SELECT FROM table, (SELECT FROM sample) WHERE equals
+            WITH sample AS
+                (
+                SELECT
+                    id
+                FROM
+                    alpha_source
+                WHERE
+                    ID < 10
+                )
+            SELECT
+                alpha_source.id
+            FROM
+                alpha_source,
+                (
+                SELECT
+                    id
+                FROM
+                    sample
+                WHERE
+                    ID >= 5
+                ) AS subsample
+            WHERE
+                alpha_source.id = subsample.id
+            ;
 
-                -- SELECT id, ra, decl FROM alpha_source OFFSET 10 ;
-                -- SELECT id, ra, decl FROM alpha_source LIMIT 10,10 OFFSET 10 ;
-                -- SELECT id, ra, decl FROM alpha_source LIMIT  0 OFFSET 10 ;
-                -- SELECT id, ra, decl FROM alpha_source LIMIT -1 OFFSET 10 ;
-                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC OFFSET 10 ;
-                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10,10 OFFSET 10 ;
-                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT  0 OFFSET 10 ;
-                -- SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT -1 OFFSET 10 ;
+            --
+            -- WITH (sample) SELECT FROM table JOIN (SELECT FROM sample) ON equals
+            WITH sample AS
+                (
+                SELECT
+                    id
+                FROM
+                    alpha_source
+                WHERE
+                    id < 10
+                )
+            SELECT
+                alpha_source.id
+            FROM
+                alpha_source
+            JOIN
+                (
+                SELECT
+                    id
+                FROM
+                    sample
+                WHERE
+                    id >= 5
+                ) AS subsample
+            ON
+                alpha_source.id = subsample.id
+            ;
 
-            \q
 
-        popd
-    popd
+            --
+            -- WITH (sample), (subsample) SELECT FROM table JOIN subsample ON equals
+            WITH sample AS
+                (
+                SELECT
+                    id AS sampid
+                FROM
+                    alpha_source
+                WHERE
+                    ID < 10
+                ),
+            subsample AS
+                (
+                SELECT
+                    sampid AS joinid
+                FROM
+                    sample
+                WHERE
+                    sampid >= 5
+                )
+            SELECT
+                id
+            FROM
+                alpha_source
+            JOIN
+                subsample
+            ON
+                id = joinid
+            ;
+
+        \q
+
+
+# -----------------------------------------------------
+# Add our secret function.
+#[user@virtual]
+
+    vi "${HOME:?}/secret.sh"
+
+        ....
+        ....
+        ....
+
+    source "${HOME:?}/secret.sh"
+    secret 'frog'
+
+# -----------------------------------------------------
+# Push our new images.
+#[user@virtual]
+
+    docker login \
+        --username $(secret docker.io.user) \
+        --password $(secret docker.io.pass)
+
+    docker push 'cosmopterix/fedora:26-1.0'
+    docker push 'cosmopterix/mariadb:10.2-1.0'
+    docker push 'cosmopterix/mariadb-base:10.2-1.0'
+    docker push 'cosmopterix/mariadb-test:10.2-1.0'
+
+    docker push 'cosmopterix/fedora:latest'
+    docker push 'cosmopterix/mariadb:latest'
+    docker push 'cosmopterix/mariadb-base:latest'
+    docker push 'cosmopterix/mariadb-test:latest'
 
