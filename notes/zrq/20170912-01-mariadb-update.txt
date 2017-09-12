@@ -31,18 +31,107 @@
         git
 
 # -----------------------------------------------------
+# Create our local settings.
+#[user@virtual]
+
+    if [ ! -e "${HOME:?}/cosmopterix.settings" ]
+    then
+        cat > "${HOME:?}/cosmopterix.settings" << EOF
+COSMOPTERIX_HOME=${HOME:?}/cosmopterix
+COSMOPTERIX_CODE=\${COSMOPTERIX_HOME:?}/github
+EOF
+    fi
+
+# -----------------------------------------------------
 # Clone our source code.
 #[user@virtual]
 
-    git clone 'git@github.com:ivoa/cosmopterix.git'
+    source "${HOME:?}/cosmopterix.settings"
+
+    if [ ! -e "$(dirname ${COSMOPTERIX_CODE:?})" ]
+    then
+        mkdir -p "$(dirname ${COSMOPTERIX_CODE:?})"
+    fi
+    
+    pushd "$(dirname ${COSMOPTERIX_CODE:?})"
+
+        if [ -e "$(basename ${COSMOPTERIX_CODE:?})" ]
+        then
+            pushd "$(basename ${COSMOPTERIX_CODE:?})"
+                git pull
+            popd
+        else    
+            git clone 'git@github.com:ivoa/cosmopterix.git' "$(basename ${COSMOPTERIX_CODE:?})"
+        fi
+    popd
+    
+# -----------------------------------------------------
+# Remove existing containers and images.
+#[user@desktop]
+
+    docker rm -v $(docker stop $(docker ps -aq))
+
+    docker rmi -f $(docker images -q)
 
 # -----------------------------------------------------
-# Update our contaners.
-#[user@virtual]
+# Build our container images.
+#[user@desktop]
 
-    pushd cosmopterix
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
 
-        
+        pushd docker
 
+            docker build \
+                fedora/26
+
+            docker build \
+                --tag "cosmopterix/fedora:26-1.0" \
+                --tag "cosmopterix/fedora:latest" \
+                fedora/26
+
+            docker build \
+                --tag "cosmopterix/pgsql:9.4-1.0" \
+                --tag "cosmopterix/pgsql:latest" \
+                pgsql
+
+            docker build \
+                --tag "cosmopterix/mysql:5.6-1.0" \
+                --tag "cosmopterix/mysql:latest" \
+                mysql
+
+            docker build \
+                --tag "cosmopterix/mariadb:10.0-1.0" \
+                --tag "cosmopterix/mariadb:latest" \
+                mariadb
+
+            docker build \
+                --tag "cosmopterix/java:8-1.0" \
+                --tag "cosmopterix/java:latest" \
+                java/8
+
+            docker build \
+                --tag "cosmopterix/derby:10.12-1.0" \
+                --tag "cosmopterix/derby:latest" \
+                derby
+
+            docker build \
+                --tag "cosmopterix/hsqldb:2.3-1.0" \
+                --tag "cosmopterix/hsqldb:latest" \
+                hsqldb
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Create our 'waitlog' function.
+#[user@desktop]
+
+waitlog()
+    {
+    local name=${1:?Name required}
+    local text=${2:?Text required}
+    sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
+    }
 
 

@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#FROM fedora:26
-FROM fedora@sha256:49236bc2f0da4105c84cfb7238b48879efb489a62fe8536934434cf2072a2319
+#Fedora 26 2017-07-20
+FROM fedora@sha256:b27b4c551b1d06be25a3c76c1a9ceefd7ff189f6f8b1711d3e4b230c2081bff3
 MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 
 #
@@ -38,6 +38,10 @@ RUN dnf install -y gzip
 RUN dnf install -y pwgen
 RUN dnf install -y gnupg
 RUN dnf install -y which
+
+#
+# Install dnf admin tools.
+RUN dnf install -y dnf-plugins-core
 
 #
 # Set the terminal type for exec.
