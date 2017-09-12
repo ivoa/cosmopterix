@@ -1,0 +1,272 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -------------------------------------------------------------------------------------------
+# Install some tools.
+#[root@virtual]
+
+    dnf -y install git
+    dnf -y install wget
+
+# -------------------------------------------------------------------------------------------
+# Add user as sudo.
+#[root@virtual]
+
+    visudo
+
+        ## Allows people in group wheel to run all commands
+    -   %wheel  ALL=(ALL)       ALL
+    +   # %wheel  ALL=(ALL)       ALL
+
+        ## Same thing without a password
+    -   # %wheel        ALL=(ALL)       NOPASSWD: ALL
+    +   %wheel        ALL=(ALL)       NOPASSWD: ALL
+s
+# -------------------------------------------------------------------------------------------
+# Increase swap space for Oracle install.
+#[user@virtual]
+
+    #
+    # Adding a swapfile.
+    # https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/3/html/System_Administration_Guide/s1-swap-adding.html
+
+    #
+    # Btrsf can't support swap files.
+    # http://superuser.com/a/539875
+
+    #
+    # Install the btrfs-swapon work around.
+    # https://github.com/sebastian-philipp/btrfs-swapon. 
+    sudo mkdir /var/local/btrfs-swapon
+    sudo chgrp users /var/local/btrfs-swapon
+    sudo chmod g+rws /var/local/btrfs-swapon
+
+    pushd /var/local/btrfs-swapon
+
+        git clone https://github.com/sebastian-philipp/btrfs-swapon.git github
+
+        pushd github
+
+            sudo cp btrfs-swapoff         btrfs-swapon /sbin/
+            sudo cp btrfs-swapon.service /etc/systemd/system/
+
+        popd
+    popd
+
+    sudo systemctl start btrfs-swapon.service
+    #sudo systemctl stop  btrfs-swapon.service
+
+    #
+    # Create the swao file.
+    sudo \
+        btrfs-swapon \
+            1G \
+            /var/swapfile
+
+# -----------------------------------------------------
+# Configure our project.
+#[user@virtual]
+
+    if [ ! -e "${HOME:?}/cosmopterix.settings" ]
+    then
+        cat > "${HOME:?}/cosmopterix.settings" << EOF
+COSMOPTERIX_HOME=/var/local/cosmopterix
+COSMOPTERIX_CODE=\${COSMOPTERIX_HOME:?}/github
+EOF
+    fi
+
+# -----------------------------------------------------
+# Checkout our source code.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+
+    if [ ! -e "${COSMOPTERIX_HOME:?}" ]
+    then
+        sudo mkdir "${COSMOPTERIX_HOME:?}"
+        sudo chgrp users "${COSMOPTERIX_HOME:?}"
+        sudo chmod g+rws "${COSMOPTERIX_HOME:?}"
+    fi
+
+    pushd "${COSMOPTERIX_HOME:?}"
+        if [ ! -e github ]
+        then
+            git clone 'git@github.com:ivoa/cosmopterix.git' github
+        else
+            pushd github
+                git pull
+            popd
+        fi
+    popd
+
+
+# -------------------------------------------------------------------------------------------
+# Download our Oracle RPM file.
+#[user@virtual]
+
+    #
+    # Download the zipfile from Oracle.
+    # http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html
+
+    version=11.2.0-1.0
+    rpmfile=oracle-xe-${version}.x86_64.rpm
+    zipfile=${rpmfile}.zip
+    tarfile=${rpmfile}.tar.gz
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_HOME:?}"
+
+        if [ ! -e 'binaries/oracle' ]
+        then
+            mkdir -p 'binaries/oracle'
+        fi
+
+        pushd 'binaries/oracle'
+            wget http://data.metagrid.co.uk/temp/oracle-xe-11.2.0-1.0.x86_64.rpm.zip
+        popd
+
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Unpack our Oracle RPM file.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+
+    pushd "${COSMOPTERIX_HOME:?}"
+        pushd binaries/oracle
+            if [ ! -e "${tarfile}" ]
+            then
+                if [ ! -e "${rpmfile}" ]
+                then
+                    if [ -e "${zipfile}" ]
+                    then
+                        unzip -j "${zipfile}" '*.rpm'
+                    else
+                        echo ""
+                        echo "-------- --------"
+                        echo "Please download the Oracle-Xe (eXpress Edition) zipfile"
+                        echo "Source [http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html]"
+                        echo "Target [${COSMOPTERIX_HOME:?}/binaries/oracle]"
+                        echo "-------- --------"
+                        echo ""
+                    fi
+                fi
+                if [ -e "${rpmfile}" ]
+                then
+                    tar -cvzf "${tarfile}" \
+                        "${rpmfile}"
+                fi
+            fi
+        popd
+    popd
+
+    pushd "${COSMOPTERIX_CODE:?}"
+        pushd docker
+            pushd oracle/oracle-xe/11.2
+                if [ ! -d 'rpm' ]
+                then
+                    mkdir 'rpm'
+                fi
+                pushd rpm
+                    if [ ! -e "${tarfile}" ]
+                    then
+                        ln "${COSMOPTERIX_HOME:?}/binaries/oracle/${tarfile}" "${tarfile}"
+                    fi
+                popd
+            popd
+        popd
+    popd
+
+# -----------------------------------------------------
+# Build our Oracle containers.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            docker build \
+                --tag "cosmopterix/oracle-linux:7.2-1.1" \
+                oracle/oracle-linux/7.2
+            
+            docker build \
+                --tag "cosmopterix/oracle-xe:11.2-1.1" \
+                oracle/oracle-xe/11.2
+
+            docker build \
+                --tag "cosmopterix/oracle-test:11.2-1.1" \
+                oracle/test
+    
+        popd
+    popd
+
+    #
+    # From MadHead (https://github.com/madhead/docker-oracle-xe)
+    # During the configuration of Oracle XE instance two files - init.ora and initXETemp.ora -
+    # are overridden with ones from config directory of this repo.
+    # The only difference is that memory_target parameter is commented in them to prevent
+    # ORA-00845: MEMORY_TARGET not supported on this system error.
+    # The only piece of magic in this image :).
+    #
+
+    #
+    # TODO - Move the create database step from the build time to run time.
+    # TODO - Move the database files into a volume.
+    # TODO - Configure database using config scripts.
+
+# -------------------------------------------------------------------------------------------
+# Run our Oracle container.
+#[user@virtual]
+
+    docker run \
+        --detach \
+        --name 'oracle' \
+        "cosmopterix/oracle-test:11.2-1.1"
+
+    docker exec \
+        --tty \
+        --interactive \
+        'oracle' \
+            sqlplus
+
+            -- Enter user-name: system
+            -- Enter password: oracle
+
+            -- Connected to:
+            -- Oracle Database 11g Express Edition Release 11.2.0.2.0 - 64bit Production
+            -- SQL> 
+
+            START /database.init/alpha-source.sql
+
+                Table created.
+                Sequence created.
+                Trigger created.
+
+                1 row created.
+                1 row created.
+                ....
+                ....
+                1 row created.
+
+

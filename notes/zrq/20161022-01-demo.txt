@@ -1,0 +1,165 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2016, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#  
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -----------------------------------------------------
+# Remove any existing containers.
+#[user@desktop]
+
+    docker rm -v $(docker stop $(docker ps -aq))
+
+# -------------------------------------------------------------------------------------------
+# Create our 'waitlog' function.
+#[user@desktop]
+
+waitlog()
+    {
+    local name=${1:?Name required}
+    local text=${2:?Text required}
+    sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
+    }
+
+# -------------------------------------------------------------------------------------------
+# Start our PostgreSQL container.
+#[user@desktop]
+
+    docker run \
+        --detach \
+        --name 'pgsql' \
+        "cosmopterix/pgsql-test"
+
+    waitlog 'pgsql' '^OKGO'
+    sleep 1
+
+# -------------------------------------------------------------------------------------------
+# Start our MySQL container.
+#[user@desktop]
+
+    docker run \
+        --detach \
+        --name 'mysql' \
+        "cosmopterix/mysql-test"
+
+    waitlog 'mysql' '^OKGO'
+    sleep 1
+
+# -------------------------------------------------------------------------------------------
+# Test our PostgreSQL container.
+#[user@desktop]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'pgsql' \
+        pgsql-client
+
+            \pset pager off
+
+            SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+
+            --
+
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+
+            --
+
+            SELECT
+                id,
+                decl,
+                mod( decl::int, 5),
+                mod(-decl::int, 5),
+                mod( decl::int,-5),
+                mod(-decl::int,-5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0 AND id <= 10
+            ;
+
+            --
+
+            SELECT
+                mod(7.5, 5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0 AND id <= 10
+            ;
+
+            --
+
+            SELECT
+                mod(decl, 5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0 AND id <= 10
+            ;
+
+            --
+
+            SELECT
+                mod(decl::int, 5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0 AND id <= 10
+            ;
+
+
+        \q
+
+# -------------------------------------------------------------------------------------------
+# Test our MySQL container.
+#[user@desktop]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mysql' \
+        mysql-client
+
+            SELECT id, ra, decl FROM alpha_source LIMIT 10 OFFSET 10 ;
+
+            --
+
+            SELECT id, ra, decl FROM alpha_source ORDER BY id DESC LIMIT 10 OFFSET 10 ;
+
+            --
+
+            SELECT
+                id,
+                ra,
+                mod( decl, 5),
+                mod(-decl, 5),
+                mod( decl,-5),
+                mod(-decl,-5)
+            FROM
+                alpha_source
+            WHERE
+                id >= 0 AND id <= 10
+            ;
+
+        \q
+
+
+
+
