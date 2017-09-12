@@ -83,12 +83,16 @@ EOF
         pushd docker
 
             docker build \
-                fedora/26
-
-            docker build \
                 --tag "cosmopterix/fedora:26-1.0" \
                 --tag "cosmopterix/fedora:latest" \
                 fedora/26
+
+            docker build \
+                --tag "cosmopterix/mariadb:10.2" \
+                --tag "cosmopterix/mariadb:latest" \
+                mariadb
+
+
 
             docker build \
                 --tag "cosmopterix/pgsql:9.4-1.0" \
@@ -100,10 +104,6 @@ EOF
                 --tag "cosmopterix/mysql:latest" \
                 mysql
 
-            docker build \
-                --tag "cosmopterix/mariadb:10.0-1.0" \
-                --tag "cosmopterix/mariadb:latest" \
-                mariadb
 
             docker build \
                 --tag "cosmopterix/java:8-1.0" \

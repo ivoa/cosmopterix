@@ -53,7 +53,7 @@ echo ""
 echo "Installing MariaDB ${mariaversion}"
 dnf install -y \
     hostname \
-    MariaDB-${mariaversion} \
-    MariaDB-server-${mariaversion} \
-    MariaDB-common-${mariaversion}
+    MariaDB \
+    MariaDB-server \
+    MariaDB-common
 
