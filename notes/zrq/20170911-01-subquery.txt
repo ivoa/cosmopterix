@@ -32,91 +32,131 @@
         INFO : Disc name [Greand.qcow]
         INFO : Disc size [16GiB]
 
+# -------------------------------------------------------------------------------------------
+# Create our 'waitlog' function.
+#[user@virtual]
+
+    waitlog()
+        {
+        local name=${1:?Name required}
+        local text=${2:?Text required}
+        sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
+        }
+
 # -----------------------------------------------------
 # Run our PostgreSQL client and server.
 #[user@virtual]
 
     docker run \
         --detach \
-        --name 'pgsql-server' \
+        --name 'pgsql-test' \
        'cosmopterix/pgsql-test'
+
+    waitlog 'pgsql-test' 'OKGO'
 
     docker exec \
         --tty \
         --interactive \
-        'pgsql-server' \
+        'pgsql-test' \
         'pgsql-client'
 
+        --
+        -- SELECT FROM (subquery)
+        SELECT
+            id
+        FROM
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            ) AS sample
+        WHERE
+            id >= 5
+        ;
 
-    --
-    -- SELECT from subquery
-    SELECT
-        id
-    FROM
-        (
+        --
+        -- SELECT FROM table WHERE IN (subquery)
         SELECT
             id
         FROM
             alpha_source
         WHERE
-            ID < 10
-        ) AS sample
-    WHERE
-        id >= 5
+            id >= 5
+        AND
+            id IN (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            )
+        ;
 
-    --
-    -- SELECT IN subquery
-    SELECT
-        id
-    FROM
-        alpha_source
-    WHERE
-        id >= 5
-    AND
-        id IN (
+        --
+        -- WITH (sample) SELECT FROM sample
+        WITH sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            )
         SELECT
             id
         FROM
-            alpha_source
+            sample
         WHERE
-            ID < 10
-        )
+            id >= 5
+        ;
 
-    --
-    -- SELECT FROM WITH subquery
-    WITH sample AS
-        (
+        --
+        -- WITH (sample) SELECT FROM table WHERE IN (SELECT FROM sample)
+        WITH sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            )
         SELECT
             id
-        FROM
+        FROM 
             alpha_source
         WHERE
-            ID < 10
-        )
-    SELECT
-        id
-    FROM
-        sample
-    WHERE
-        id >= 5
+            alpha_source.id IN 
+                (
+                SELECT
+                    id
+                FROM
+                    sample
+                WHERE
+                    ID >= 5
+                )
+        ;
 
-    --
-    -- IN WITH subquery
-    WITH sample AS
-        (
+        --
+        -- WITH (sample) SELECT FROM table, (SELECT FROM sample) WHERE equals
+        WITH sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            )
         SELECT
-            id
+            alpha_source.id
         FROM
-            alpha_source
-        WHERE
-            ID < 10
-        )
-    SELECT
-        id
-    FROM 
-        alpha_source
-    WHERE
-        alpha_source.id IN 
+            alpha_source,
             (
             SELECT
                 id
@@ -124,33 +164,70 @@
                 sample
             WHERE
                 ID >= 5
-            )
+            ) AS subsample
+        WHERE
+            alpha_source.id = subsample.id
+        ;
 
-    --
-    -- WHERE equals FROM (WITH sample)
-    WITH sample AS
-        (
+        --
+        -- WITH (sample) SELECT FROM table JOIN (SELECT FROM sample) ON equals
+        WITH sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                id < 10
+            )
+        SELECT
+            alpha_source.id
+        FROM
+            alpha_source
+        JOIN
+            (
+            SELECT
+                id
+            FROM
+                sample
+            WHERE
+                id >= 5
+            ) AS subsample
+        ON
+            alpha_source.id = subsample.id
+        ;
+
+        --
+        -- WITH (sample), (subsample) SELECT FROM table JOIN subsample ON equals
+        WITH sample AS
+            (
+            SELECT
+                id AS sampid
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            ),
+        subsample AS
+            (
+            SELECT
+                sampid AS joinid
+            FROM
+                sample
+            WHERE
+                sampid >= 5
+            )
         SELECT
             id
         FROM
             alpha_source
-        WHERE
-            ID < 10
-        )
-    SELECT
-        alpha_source.id
-    FROM
-        alpha_source,
-        (
-        SELECT
-            id
-        FROM
-            sample
-        WHERE
-            ID >= 5
-        ) AS subsample
-    WHERE
-        alpha_source.id = subsample.id
+        JOIN
+            subsample
+        ON
+            id = joinid
+        ;
+
+    \q
 
 # -----------------------------------------------------
 # Run our MySQL client and server.
@@ -158,77 +235,115 @@
 
     docker run \
         --detach \
-        --name 'mysql-server' \
+        --name 'mysql-test' \
        'cosmopterix/mysql-test'
+
+    waitlog 'mysql-test' 'OKGO'
 
     docker exec \
         --tty \
         --interactive \
-        'mysql-server' \
+        'mysql-test' \
         'mysql-client'
 
+#
+# Not available in current version (5.6.33).
+# Possibly available in next major version (8.x).
+# http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes/
+# http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes-part-two-how-to-generate-series/
+# 
+# Alternative - use a VIEW ?
+# http://guilhembichot.blogspot.co.uk/2013/11/with-recursive-and-mysql.html
+# 
+# New version in development (8.x)
+# https://dev.mysql.com/downloads/file/?id=469632
+# https://dev.mysql.com/doc/refman/8.0/en/linux-installation-yum-repo.html
+# https://repo.mysql.com//mysql57-community-release-fc25-10.noarch.rpm
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/with.html
+# https://stackoverflow.com/questions/324935/mysql-with-clause
+# http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes/
+# http://guilhembichot.blogspot.co.uk/2013/11/with-recursive-and-mysql.html
+# http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes/
+# http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes-part-two-how-to-generate-series/
+# 
 
-Not available in current version (5.6.33).
-Possibly available in next major version (8.x).
-http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes/
-http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes-part-two-how-to-generate-series/
+        SELECT version();
 
-Alternative - use a VIEW ?
-http://guilhembichot.blogspot.co.uk/2013/11/with-recursive-and-mysql.html
+            +-----------+
+            | version() |
+            +-----------+
+            | 5.6.33    |
+            +-----------+
 
-New version in development (8.x)
-https://dev.mysql.com/downloads/file/?id=469632
-https://dev.mysql.com/doc/refman/8.0/en/linux-installation-yum-repo.html
-https://repo.mysql.com//mysql57-community-release-fc25-10.noarch.rpm
+        --
+        -- SELECT from VIEW
+        CREATE VIEW sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            );
 
-https://dev.mysql.com/doc/refman/8.0/en/with.html
-https://stackoverflow.com/questions/324935/mysql-with-clause
-http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes/
-http://guilhembichot.blogspot.co.uk/2013/11/with-recursive-and-mysql.html
-http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes/
-http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-mysql-ctes-part-two-how-to-generate-series/
-
-    --
-    -- SELECT from VIEW
-    CREATE VIEW sample AS
-        (
         SELECT
             id
         FROM
-            alpha_source
+            sample
         WHERE
-            ID < 10
-        );
+            id < 8
+            ;
 
-    SELECT
-        id
-    FROM
-        sample
-    WHERE
-        id < 8
-        ;
-        
-    DROP VIEW sample ;
+        DROP VIEW sample;
 
-    --
-    -- IN (SELECT from VIEW)
+        --
+        -- IN (SELECT from VIEW)
+        CREATE VIEW sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            );
 
-    CREATE VIEW sample AS
-        (
         SELECT
             id
-        FROM
+        FROM 
             alpha_source
         WHERE
-            ID < 10
-        );
+            alpha_source.id IN 
+                (
+                SELECT
+                    id
+                FROM
+                    sample
+                WHERE
+                    ID < 5
+                )
+            ;
 
-    SELECT
-        id
-    FROM 
-        alpha_source
-    WHERE
-        alpha_source.id IN 
+        DROP VIEW sample ;
+
+        --
+        -- FROM (SELECT from WITH)
+        CREATE VIEW sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            );
+
+        SELECT
+            alpha_source.id
+        FROM
+            alpha_source,
             (
             SELECT
                 id
@@ -236,41 +351,14 @@ http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-
                 sample
             WHERE
                 ID < 5
-            )
-        ;
-
-    DROP VIEW sample ;
-
-    --
-    -- FROM (SELECT from WITH)
-
-    CREATE VIEW sample AS
-        (
-        SELECT
-            id
-        FROM
-            alpha_source
+            ) AS subsample
         WHERE
-            ID < 10
-        );
+            alpha_source.id = subsample.id
+            ;
 
-    SELECT
-        alpha_source.id
-    FROM
-        alpha_source,
-        (
-        SELECT
-            id
-        FROM
-            sample
-        WHERE
-            ID < 5
-        ) AS subsample
-    WHERE
-        alpha_source.id = subsample.id
-        ;
+        DROP VIEW sample ;
 
-    DROP VIEW sample ;
+    \q
 
 # -----------------------------------------------------
 # Run our MariaDB client and server.
@@ -278,86 +366,127 @@ http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-
 
     docker run \
         --detach \
-        --name 'mariadb-server' \
+        --name 'mariadb-test' \
        'cosmopterix/mariadb-test'
+
+    waitlog 'mariadb-test' 'OKGO'
 
     docker exec \
         --tty \
         --interactive \
-        'mariadb-server' \
+        'mariadb-test' \
         'mariadb-client'
 
+#
+# Common Table Expression WITH was introduced in MariaDB 10.2.1.
+# Recursive WITH has been supported since MariaDB 10.2.2.
+# https://mariadb.com/kb/en/library/with/
 
+        SELECT version() ;
 
-    --
-    -- SELECT from subquery
-    SELECT
-        id
-    FROM
-        (
+            +----------------+
+            | version()      |
+            +----------------+
+            | 10.2.8-MariaDB |
+            +----------------+
+
+        --
+        -- SELECT FROM (subquery)
+        SELECT
+            id
+        FROM
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            ) AS sample
+        WHERE
+            id >= 5
+        ;
+
+        --
+        -- SELECT FROM table WHERE IN (subquery)
         SELECT
             id
         FROM
             alpha_source
         WHERE
-            ID < 10
-        ) AS sample
-    WHERE
-        id >= 5
+            id >= 5
+        AND
+            id IN (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            )
+        ;
 
-    --
-    -- SELECT IN subquery
-    SELECT
-        id
-    FROM
-        alpha_source
-    WHERE
-        id >= 5
-    AND
-        id IN (
+        --
+        -- WITH (sample) SELECT FROM sample
+        WITH sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            )
         SELECT
             id
         FROM
-            alpha_source
+            sample
         WHERE
-            ID < 10
-        )
+            id >= 5
+        ;
 
-    --
-    -- SELECT FROM WITH subquery
-    WITH sample AS
-        (
+        --
+        -- WITH (sample) SELECT FROM table WHERE IN (SELECT FROM sample)
+        WITH sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            )
         SELECT
             id
-        FROM
+        FROM 
             alpha_source
         WHERE
-            ID < 10
-        )
-    SELECT
-        id
-    FROM
-        sample
-    WHERE
-        id >= 5
+            alpha_source.id IN 
+                (
+                SELECT
+                    id
+                FROM
+                    sample
+                WHERE
+                    ID >= 5
+                )
+        ;
 
-    --
-    -- IN WITH subquery
-    WITH sample AS
-        (
+        --
+        -- WITH (sample) SELECT FROM table, (SELECT FROM sample) WHERE equals
+        WITH sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            )
         SELECT
-            id
+            alpha_source.id
         FROM
-            alpha_source
-        WHERE
-            ID < 10
-        )
-    SELECT
-        id
-    FROM 
-        alpha_source
-    WHERE
-        alpha_source.id IN 
+            alpha_source,
             (
             SELECT
                 id
@@ -365,31 +494,69 @@ http://mysqlserverteam.com/mysql-8-0-labs-recursive-common-table-expressions-in-
                 sample
             WHERE
                 ID >= 5
-            )
+            ) AS subsample
+        WHERE
+            alpha_source.id = subsample.id
+        ;
 
-    --
-    -- WHERE equals FROM (WITH sample)
-    WITH sample AS
-        (
+        --
+        -- WITH (sample) SELECT FROM table JOIN (SELECT FROM sample) ON equals
+        WITH sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                id < 10
+            )
+        SELECT
+            alpha_source.id
+        FROM
+            alpha_source
+        JOIN
+            (
+            SELECT
+                id
+            FROM
+                sample
+            WHERE
+                id >= 5
+            ) AS subsample
+        ON
+            alpha_source.id = subsample.id
+        ;
+
+
+        --
+        -- WITH (sample), (subsample) SELECT FROM table JOIN subsample ON equals
+        WITH sample AS
+            (
+            SELECT
+                id AS sampid
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            ),
+        subsample AS
+            (
+            SELECT
+                sampid AS joinid
+            FROM
+                sample
+            WHERE
+                sampid >= 5
+            )
         SELECT
             id
         FROM
             alpha_source
-        WHERE
-            ID < 10
-        )
-    SELECT
-        alpha_source.id
-    FROM
-        alpha_source,
-        (
-        SELECT
-            id
-        FROM
-            sample
-        WHERE
-            ID >= 5
-        ) AS subsample
-    WHERE
-        alpha_source.id = subsample.id
+        JOIN
+            subsample
+        ON
+            id = joinid
+        ;
+
+    \q
 
