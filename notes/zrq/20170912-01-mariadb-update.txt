@@ -130,111 +130,86 @@ EOF
         'mariadb-test' \
         'mariadb-client'
 
-            SELECT version() ;
+        SELECT version() ;
 
-                +----------------+
-                | version()      |
-                +----------------+
-                | 10.2.8-MariaDB |
-                +----------------+
-                
-            --
-            -- SELECT FROM (subquery)
-            SELECT
-                id
-            FROM
-                (
-                SELECT
-                    id
-                FROM
-                    alpha_source
-                WHERE
-                    ID < 10
-                ) AS sample
-            WHERE
-                id >= 5
-            ;
-
-            --
-            -- SELECT FROM table WHERE IN (subquery)
+            +----------------+
+            | version()      |
+            +----------------+
+            | 10.2.8-MariaDB |
+            +----------------+
+            
+        --
+        -- SELECT FROM (subquery)
+        SELECT
+            id
+        FROM
+            (
             SELECT
                 id
             FROM
                 alpha_source
             WHERE
-                id >= 5
-            AND
-                id IN (
-                SELECT
-                    id
-                FROM
-                    alpha_source
-                WHERE
-                    ID < 10
-                )
-            ;
+                ID < 10
+            ) AS sample
+        WHERE
+            id >= 5
+        ;
 
-            --
-            -- WITH (sample) SELECT FROM sample
-            WITH sample AS
-                (
-                SELECT
-                    id
-                FROM
-                    alpha_source
-                WHERE
-                    ID < 10
-                )
+        --
+        -- SELECT FROM table WHERE IN (subquery)
+        SELECT
+            id
+        FROM
+            alpha_source
+        WHERE
+            id >= 5
+        AND
+            id IN (
             SELECT
                 id
             FROM
-                sample
-            WHERE
-                id >= 5
-            ;
-
-            --
-            -- WITH (sample) SELECT FROM table WHERE IN (SELECT FROM sample)
-            WITH sample AS
-                (
-                SELECT
-                    id
-                FROM
-                    alpha_source
-                WHERE
-                    ID < 10
-                )
-            SELECT
-                id
-            FROM 
                 alpha_source
             WHERE
-                alpha_source.id IN 
-                    (
-                    SELECT
-                        id
-                    FROM
-                        sample
-                    WHERE
-                        ID >= 5
-                    )
-            ;
+                ID < 10
+            )
+        ;
 
-            --
-            -- WITH (sample) SELECT FROM table, (SELECT FROM sample) WHERE equals
-            WITH sample AS
-                (
-                SELECT
-                    id
-                FROM
-                    alpha_source
-                WHERE
-                    ID < 10
-                )
+        --
+        -- WITH (sample) SELECT FROM sample
+        WITH sample AS
+            (
             SELECT
-                alpha_source.id
+                id
             FROM
-                alpha_source,
+                alpha_source
+            WHERE
+                ID < 10
+            )
+        SELECT
+            id
+        FROM
+            sample
+        WHERE
+            id >= 5
+        ;
+
+        --
+        -- WITH (sample) SELECT FROM table WHERE IN (SELECT FROM sample)
+        WITH sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            )
+        SELECT
+            id
+        FROM 
+            alpha_source
+        WHERE
+            alpha_source.id IN 
                 (
                 SELECT
                     id
@@ -242,71 +217,96 @@ EOF
                     sample
                 WHERE
                     ID >= 5
-                ) AS subsample
-            WHERE
-                alpha_source.id = subsample.id
-            ;
-
-            --
-            -- WITH (sample) SELECT FROM table JOIN (SELECT FROM sample) ON equals
-            WITH sample AS
-                (
-                SELECT
-                    id
-                FROM
-                    alpha_source
-                WHERE
-                    id < 10
                 )
-            SELECT
-                alpha_source.id
-            FROM
-                alpha_source
-            JOIN
-                (
-                SELECT
-                    id
-                FROM
-                    sample
-                WHERE
-                    id >= 5
-                ) AS subsample
-            ON
-                alpha_source.id = subsample.id
-            ;
+        ;
 
-
-            --
-            -- WITH (sample), (subsample) SELECT FROM table JOIN subsample ON equals
-            WITH sample AS
-                (
-                SELECT
-                    id AS sampid
-                FROM
-                    alpha_source
-                WHERE
-                    ID < 10
-                ),
-            subsample AS
-                (
-                SELECT
-                    sampid AS joinid
-                FROM
-                    sample
-                WHERE
-                    sampid >= 5
-                )
+        --
+        -- WITH (sample) SELECT FROM table, (SELECT FROM sample) WHERE equals
+        WITH sample AS
+            (
             SELECT
                 id
             FROM
                 alpha_source
-            JOIN
-                subsample
-            ON
-                id = joinid
-            ;
+            WHERE
+                ID < 10
+            )
+        SELECT
+            alpha_source.id
+        FROM
+            alpha_source,
+            (
+            SELECT
+                id
+            FROM
+                sample
+            WHERE
+                ID >= 5
+            ) AS subsample
+        WHERE
+            alpha_source.id = subsample.id
+        ;
 
-        \q
+        --
+        -- WITH (sample) SELECT FROM table JOIN (SELECT FROM sample) ON equals
+        WITH sample AS
+            (
+            SELECT
+                id
+            FROM
+                alpha_source
+            WHERE
+                id < 10
+            )
+        SELECT
+            alpha_source.id
+        FROM
+            alpha_source
+        JOIN
+            (
+            SELECT
+                id
+            FROM
+                sample
+            WHERE
+                id >= 5
+            ) AS subsample
+        ON
+            alpha_source.id = subsample.id
+        ;
+
+
+        --
+        -- WITH (sample), (subsample) SELECT FROM table JOIN subsample ON equals
+        WITH sample AS
+            (
+            SELECT
+                id AS sampid
+            FROM
+                alpha_source
+            WHERE
+                ID < 10
+            ),
+        subsample AS
+            (
+            SELECT
+                sampid AS joinid
+            FROM
+                sample
+            WHERE
+                sampid >= 5
+            )
+        SELECT
+            id
+        FROM
+            alpha_source
+        JOIN
+            subsample
+        ON
+            id = joinid
+        ;
+
+    \q
 
 
 # -----------------------------------------------------
