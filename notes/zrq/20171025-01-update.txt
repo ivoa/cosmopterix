@@ -1,0 +1,115 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2017, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+# -----------------------------------------------------
+# Create our local settings.
+#[user@virtual]
+
+    if [ ! -e "${HOME:?}/cosmopterix.settings" ]
+    then
+        cat > "${HOME:?}/cosmopterix.settings" << EOF
+COSMOPTERIX_HOME=${HOME:?}/cosmopterix
+COSMOPTERIX_CODE=\${COSMOPTERIX_HOME:?}/github
+EOF
+    fi
+
+# -----------------------------------------------------
+# Install git client.
+#[root@virtual]
+
+    dnf \
+        install -y \
+        git
+
+# -----------------------------------------------------
+# Clone our source code.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+
+    if [ ! -e "$(dirname ${COSMOPTERIX_CODE:?})" ]
+    then
+        mkdir -p "$(dirname ${COSMOPTERIX_CODE:?})"
+    fi
+    
+    pushd "$(dirname ${COSMOPTERIX_CODE:?})"
+
+        if [ -e "$(basename ${COSMOPTERIX_CODE:?})" ]
+        then
+            pushd "$(basename ${COSMOPTERIX_CODE:?})"
+                git pull
+            popd
+        else    
+            git clone 'git@github.com:ivoa/cosmopterix.git' "$(basename ${COSMOPTERIX_CODE:?})"
+        fi
+    popd
+
+# -----------------------------------------------------
+# Remove existing containers and images.
+#[user@laptop]
+
+    docker rm -v $(docker stop $(docker ps -aq))
+
+    docker rmi -f $(docker images -q)
+
+# -------------------------------------------------------------------------------------------
+# Create our 'waitlog' function.
+#[user@laptop]
+
+    waitlog()
+        {
+        local name=${1:?Name required}
+        local text=${2:?Text required}
+        sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
+        }
+
+
+
+
+
+
+
+# -----------------------------------------------------
+# Update our Fedora image.
+#[user@laptop]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            vi fedora/26/Dockerfile
+
+            -   #Fedora 26 2017-07-20
+            -   FROM fedora@sha256:b27b4c551b1d06be25a3c76c1a9ceefd7ff189f6f8b1711d3e4b230c2081bff3
+            +   #Fedora 26 2017-10-25
+            +   FROM fedora@sha256:613830d906f8897c05fd737aea8c7c00e4ecb5a518eedf71958c2c110532957c
+
+            docker build \
+                --tag "cosmopterix/fedora:26-1.1" \
+                --tag "cosmopterix/fedora:latest" \
+                fedora/26
+
+        popd
+    popd
+
+

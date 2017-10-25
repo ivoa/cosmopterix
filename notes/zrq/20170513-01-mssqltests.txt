@@ -63,8 +63,6 @@
         'mssql' \
         bash
 
-
-
 # Alternative command line tool ?
 # https://github.com/bmc/sqlcmd/blob/master/doc/users_guide.rst
 # https://github.com/bmc/sqlcmd
@@ -133,7 +131,7 @@ go
         --
         -- no sort
         -- no group
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 :!! echo 'query 1'
 
             SELECT
@@ -152,7 +150,7 @@ go
         --
         -- sort field in select list
         -- no group
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 :!! echo 'query 2'
 
             SELECT
@@ -171,6 +169,7 @@ go
 go
 
 :!! echo 'query 3'
+
             SELECT
                 id,
                 ra,
@@ -187,6 +186,7 @@ go
 go
 
 :!! echo 'query 4'
+
             SELECT
                 id,
                 ra,
@@ -205,9 +205,9 @@ go
         --
         -- sort field not in select list
         -- no group
-        -- PASS pgsql, mysql, oracle
-
+        -- PASS pgsql, mysql, mssql, oracle
 :!! echo 'query 4'
+
             SELECT
                 id,
                 ra,
@@ -226,9 +226,9 @@ go
         --
         -- sort expression in select list
         -- no group
-        -- PASS pgsql, mysql, oracle
-
+        -- PASS pgsql, mysql, mssql, oracle
 :!! echo 'query 5'
+
             SELECT
                 id % 4
                 ra,
@@ -247,9 +247,9 @@ go
         --
         -- sort expression not in select list
         -- no group
-        -- PASS pgsql, mysql, oracle
-
+        -- PASS pgsql, mysql, mssql, oracle
 :!! echo 'query 6'
+
             SELECT
                 id,
                 ra,
@@ -268,7 +268,7 @@ go
         --
         -- sort expression field not in select list
         -- no group
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 7'
             SELECT
@@ -288,7 +288,7 @@ go
         --
         -- no sort
         -- group field in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 7'
             SELECT
@@ -309,7 +309,7 @@ go
         --
         -- no sort
         -- group field not in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 8'
             SELECT
@@ -329,7 +329,7 @@ go
         --
         -- no sort
         -- group expression in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 9'
             SELECT
@@ -350,7 +350,7 @@ go
         --
         -- no sort
         -- group expression not in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 10'
             SELECT
@@ -371,7 +371,7 @@ go
         -- no sort
         -- group expression not in select list
         -- aggregate in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 11'
             SELECT
@@ -393,7 +393,7 @@ go
         -- no sort
         -- group expression not in select list
         -- aggregate expression in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 12'
             SELECT
@@ -438,7 +438,7 @@ go
         -- no sort
         -- group expression not in select list
         -- similar expression in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 14'
             SELECT
@@ -492,7 +492,8 @@ go
         -- no sort
         -- group expression in select list
         -- similar expression in select list
-        -- PASS mysql, oracle
+        -- TODO pgsql
+        -- PASS mysql, mssql, oracle
 
 :!! echo 'query 17'
             SELECT
@@ -515,7 +516,8 @@ go
         -- no sort
         -- group expression not in select list
         -- similar expression in select list
-        -- PASS mysql, oracle
+        -- TODO pgsql
+        -- PASS mysql, mssql, oracle
 
 :!! echo 'query 18'
             SELECT
@@ -537,7 +539,7 @@ go
         -- sort and group on the same field
         -- sort field aggregate in select list
         -- group field in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 19'
             SELECT
@@ -561,7 +563,7 @@ go
         -- sort and group on the same field
         -- sort field not in select list
         -- group field not in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 20'
             SELECT
@@ -583,7 +585,7 @@ go
         --
         -- sort and group on the same expression
         -- sort and group expression in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 21'
             SELECT
@@ -606,7 +608,7 @@ go
         --
         -- sort and group on the same expression
         -- sort and group expression not in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 22'
             SELECT
@@ -629,7 +631,7 @@ go
         -- sort and group on the same expression
         -- sort and group expression not in select list
         -- aggregate in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 23'
             SELECT
@@ -653,7 +655,7 @@ go
         -- sort and group on the same expression
         -- sort and group expression not in select list
         -- aggregate expression in select list
-        -- PASS pgsql, mysql, oracle
+        -- PASS pgsql, mysql, mssql, oracle
 
 :!! echo 'query 24'
             SELECT

@@ -16,7 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #Fedora 26 2017-07-20
-FROM fedora@sha256:b27b4c551b1d06be25a3c76c1a9ceefd7ff189f6f8b1711d3e4b230c2081bff3
+#FROM fedora@sha256:b27b4c551b1d06be25a3c76c1a9ceefd7ff189f6f8b1711d3e4b230c2081bff3
+#Fedora 26 2017-10-25
+FROM fedora@sha256:613830d906f8897c05fd737aea8c7c00e4ecb5a518eedf71958c2c110532957c
 MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 
 #
@@ -24,8 +26,9 @@ MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 VOLUME /var/cache/
 
 #
-# Clean the yum cache
+# Clean and update the yum cache
 RUN dnf clean all
+RUN dnf makecache
 
 #
 # Install common admin tools.
