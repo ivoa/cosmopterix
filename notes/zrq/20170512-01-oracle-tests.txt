@@ -40,7 +40,7 @@
         ## Same thing without a password
     -   # %wheel        ALL=(ALL)       NOPASSWD: ALL
     +   %wheel        ALL=(ALL)       NOPASSWD: ALL
-s
+
 # -------------------------------------------------------------------------------------------
 # Increase swap space for Oracle install.
 #[user@virtual]
@@ -73,10 +73,9 @@ s
     popd
 
     sudo systemctl start btrfs-swapon.service
-    #sudo systemctl stop  btrfs-swapon.service
 
     #
-    # Create the swao file.
+    # Setup the swap file.
     sudo \
         btrfs-swapon \
             1G \

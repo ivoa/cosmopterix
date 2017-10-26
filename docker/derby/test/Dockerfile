@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM cosmopterix/derby-base:10.12-1.1
+FROM cosmopterix/derby-base:10.14-1.2
 MAINTAINER Dave Morris <docker-admin@metagrid.co.uk>
 
 #

@@ -82,12 +82,6 @@ EOF
         sed -r '/'${text}'/q' <( exec docker logs --follow "${name}" ); kill $! 2> /dev/null
         }
 
-
-
-
-
-
-
 # -----------------------------------------------------
 # Update our Fedora image.
 #[user@laptop]
@@ -105,11 +99,867 @@ EOF
             +   FROM fedora@sha256:613830d906f8897c05fd737aea8c7c00e4ecb5a518eedf71958c2c110532957c
 
             docker build \
-                --tag "cosmopterix/fedora:26-1.1" \
                 --tag "cosmopterix/fedora:latest" \
+                --tag "cosmopterix/fedora:26-1.2" \
                 fedora/26
 
         popd
     popd
 
+# -----------------------------------------------------
+# Update our PostgreSQL images.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            vi pgsql/base/Dockerfile
+
+            -   FROM cosmopterix/fedora:26-1.0
+            +   FROM cosmopterix/fedora:26-1.2
+
+            -   ENV pgsqlversion=9.4.9
+            +   ENV pgsqlversion=9.6.5
+
+            vi pgsql/test/Dockerfile
+
+            -   FROM cosmopterix/pgsql-base:9.4-1.1
+            +   FROM cosmopterix/pgsql-base:9.6-1.2
+
+            docker build \
+                --tag "cosmopterix/pgsql:latest" \
+                --tag "cosmopterix/pgsql:9.6-1.2" \
+                --tag "cosmopterix/pgsql-base:latest" \
+                --tag "cosmopterix/pgsql-base:9.6-1.2" \
+                pgsql/base
+
+            docker build \
+                --tag "cosmopterix/pgsql-test:latest" \
+                --tag "cosmopterix/pgsql-test:9.6-1.2" \
+                pgsql/test
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Test our PostgreSQL container.
+#[user@virtual]
+
+    docker run \
+        --detach \
+        --name 'pgsql' \
+       'cosmopterix/pgsql-test:9.6-1.2'
+
+    waitlog 'pgsql' 'OKGO'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'pgsql' \
+        'pgsql-client'
+
+        SELECT version() ;
+
+            PostgreSQL 9.6.5 on x86_64-redhat-linux-gnu, compiled by gcc (GCC) 7.1.1 20170622 (Red Hat 7.1.1-3), 64-bit
+
+        SELECT
+            id,
+            random()
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+             id |       random       
+            ----+--------------------
+              1 |   0.35097213415429
+              2 |  0.795501516666263
+              3 |  0.358431099448353
+              4 | 0.0541495378129184
+
+             id |      random       
+            ----+-------------------
+              1 | 0.012719648424536
+              2 | 0.955261590424925
+              3 | 0.147661171853542
+              4 | 0.300157958641648
+
+        SELECT
+            id,
+            setseed(0.2),
+            random()
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+             id | setseed |      random       
+            ----+---------+-------------------
+              1 |         | 0.836311135906726
+              2 |         | 0.836311135906726
+              3 |         | 0.836311135906726
+              4 |         | 0.836311135906726
+
+             id | setseed |      random       
+            ----+---------+-------------------
+              1 |         | 0.836311135906726
+              2 |         | 0.836311135906726
+              3 |         | 0.836311135906726
+              4 |         | 0.836311135906726
+        
+        SELECT
+            id * 0.1,
+            setseed(id * 0.1),
+            random()
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+             ?column? | setseed |      random       
+            ----------+---------+-------------------
+                  0.1 |         | 0.727818949148059
+                  0.2 |         | 0.836311135906726
+                  0.3 |         | 0.939957889728248
+                  0.4 |         | 0.687135810498148
+
+             ?column? | setseed |      random       
+            ----------+---------+-------------------
+                  0.1 |         | 0.727818949148059
+                  0.2 |         | 0.836311135906726
+                  0.3 |         | 0.939957889728248
+                  0.4 |         | 0.687135810498148
+
+        SELECT
+            (id % 2) * 0.1,
+            setseed((id % 2) * 0.1),
+            random()
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+             ?column? | setseed |      random       
+            ----------+---------+-------------------
+                  0.1 |         | 0.727818949148059
+                  0.0 |         | 0.840187716763467
+                  0.1 |         | 0.727818949148059
+                  0.0 |         | 0.840187716763467
+
+             ?column? | setseed |      random       
+            ----------+---------+-------------------
+                  0.1 |         | 0.727818949148059
+                  0.0 |         | 0.840187716763467
+                  0.1 |         | 0.727818949148059
+                  0.0 |         | 0.840187716763467
+
+
+# -----------------------------------------------------
+# Update our MySQL images.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            vi mysql/base/Dockerfile
+
+            -   FROM cosmopterix/fedora:23-1.1
+            +   FROM cosmopterix/fedora:26-1.2
+
+            -   ENV mysqlversion 5.6.33
+            +   ENV mysqlversion 5.7.19
+
+            vi mysql/test/Dockerfile
+
+            -   FROM cosmopterix/mysql-base:5.6-1.1
+            +   FROM cosmopterix/mysql-base:5.7-1.2
+
+            #
+            # Remove unsupported option
+            # https://dev.mysql.com/doc/refman/5.7/en/mysql-install-db.html#option_mysql_install_db_skip-name-resolve
+            # "This option was removed in MySQL 5.7.5."
+            vi mysql/base/bin/entrypoint
+
+            -   gosu mysql mysql_install_db \
+            -       --user="${serveruser}" \
+            -       --datadir="${serverdata}" \
+            -       --skip-name-resolve
+
+            +   gosu mysql mysqld \
+            +       --initialize \
+            +       --user="${serveruser}" \
+            +       --datadir="${serverdata}" \
+            +       --skip_networking \
+            +       --skip-name-resolve
+
+FAILS
+
+            docker build \
+                --tag "cosmopterix/mysql:latest" \
+                --tag "cosmopterix/mysql:5.7-1.2" \
+                --tag "cosmopterix/mysql-base:latest" \
+                --tag "cosmopterix/mysql-base:5.7-1.2" \
+                mysql/base
+
+            docker build \
+                --tag "cosmopterix/mysql-test:latest" \
+                --tag "cosmopterix/mysql-test:5.7-1.2" \
+                mysql/test
+
+        popd
+    popd
+
+# -----------------------------------------------------
+# Update our Mariadb images.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            vi mariadb/base/Dockerfile
+
+            -   FROM cosmopterix/fedora:26-1.0
+            +   FROM cosmopterix/fedora:26-1.2
+
+                ENV mariaversion 10.2
+
+            vi mariadb/test/Dockerfile
+
+            -   FROM cosmopterix/mariadb-base:10.2-1.0
+            +   FROM cosmopterix/mariadb-base:10.2-1.2
+
+            docker build \
+                --tag "cosmopterix/mariadb:latest" \
+                --tag "cosmopterix/mariadb:10.2-1.2" \
+                --tag "cosmopterix/mariadb-base:latest" \
+                --tag "cosmopterix/mariadb-base:10.2-1.2" \
+                mariadb/base
+
+            docker build \
+                --tag "cosmopterix/mariadb-test:latest" \
+                --tag "cosmopterix/mariadb-test:10.2-1.2" \
+                mariadb/test
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Test our Mariadb container.
+#[user@virtual]
+
+    docker run \
+        --detach \
+        --name 'mariadb' \
+       'cosmopterix/mariadb-test:10.2-1.2'
+
+    waitlog 'mariadb' 'OKGO'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mariadb' \
+        'mariadb-client'
+
+        SELECT
+            version()
+            ;
+
+            10.2.9-MariaDB
+
+        SELECT
+            id,
+            rand()
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+            +----+----------------------+
+            | id | rand()               |
+            +----+----------------------+
+            |  1 |   0.2272531671703357 |
+            |  2 | 0.029195290086041475 |
+            |  3 |   0.4642169796528453 |
+            |  4 |  0.23349905873974697 |
+            +----+----------------------+
+
+            +----+---------------------+
+            | id | rand()              |
+            +----+---------------------+
+            |  1 |   0.774844385473844 |
+            |  2 | 0.17372478188362417 |
+            |  3 |  0.5440907837302338 |
+            |  4 | 0.19927960373394155 |
+            +----+---------------------+
+
+        SELECT
+            id,
+            rand(2)
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+            +----+---------------------+
+            | id | rand(2)             |
+            +----+---------------------+
+            |  1 |  0.6555866465490187 |
+            |  2 | 0.12234661925802624 |
+            |  3 |    0.64497318737672 |
+            |  4 |  0.8578261098431667 |
+            +----+---------------------+
+
+            +----+---------------------+
+            | id | rand(2)             |
+            +----+---------------------+
+            |  1 |  0.6555866465490187 |
+            |  2 | 0.12234661925802624 |
+            |  3 |    0.64497318737672 |
+            |  4 |  0.8578261098431667 |
+            +----+---------------------+
+        
+        SELECT
+            id,
+            rand(id)
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+            +----+---------------------+
+            | id | rand(id)            |
+            +----+---------------------+
+            |  1 | 0.40540353712197724 |
+            |  2 |  0.6555866465490187 |
+            |  3 |  0.9057697559760601 |
+            |  4 | 0.15595286540310166 |
+            +----+---------------------+
+
+            +----+---------------------+
+            | id | rand(id)            |
+            +----+---------------------+
+            |  1 | 0.40540353712197724 |
+            |  2 |  0.6555866465490187 |
+            |  3 |  0.9057697559760601 |
+            |  4 | 0.15595286540310166 |
+            +----+---------------------+
+
+        SELECT
+            id % 2,
+            rand(id % 2)
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+            +--------+---------------------+
+            | id % 2 | rand(id % 2)        |
+            +--------+---------------------+
+            |      1 | 0.40540353712197724 |
+            |      0 | 0.15522042769493574 |
+            |      1 | 0.40540353712197724 |
+            |      0 | 0.15522042769493574 |
+            +--------+---------------------+
+
+            +--------+---------------------+
+            | id % 2 | rand(id % 2)        |
+            +--------+---------------------+
+            |      1 | 0.40540353712197724 |
+            |      0 | 0.15522042769493574 |
+            |      1 | 0.40540353712197724 |
+            |      0 | 0.15522042769493574 |
+            +--------+---------------------+
+
+# -----------------------------------------------------
+# Update our Derby images.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            vi java/8/Dockerfile
+
+            -   FROM cosmopterix/fedora:23-1.1
+            +   FROM cosmopterix/fedora:26-1.2
+
+            vi derby/base/Dockerfile
+
+            -   FROM cosmopterix/java:8-1.1
+            +   FROM cosmopterix/java:8-1.2
+
+            -   ENV derbyversion=10.12.1.1
+            +   ENV derbyversion=10.14.1.0
+
+            vi derby/test/Dockerfile
+
+            -   FROM cosmopterix/derby-base:10.12-1.1
+            +   FROM cosmopterix/derby-base:10.14-1.2
+
+            docker build \
+                --tag "cosmopterix/java:latest" \
+                --tag "cosmopterix/java:8-1.2" \
+                java/8
+
+            docker build \
+                --tag "cosmopterix/derby:latest" \
+                --tag "cosmopterix/derby:10.14-1.2" \
+                --tag "cosmopterix/derby-base:latest" \
+                --tag "cosmopterix/derby-base:10.14-1.2" \
+                derby/base
+
+            docker build \
+                --tag "cosmopterix/derby-test:latest" \
+                --tag "cosmopterix/derby-test:10.2-1.2" \
+                derby/test
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Test our Derby container.
+#[user@virtual]
+
+    docker run \
+        --detach \
+        --name 'derby' \
+       'cosmopterix/derby-test:10.2-1.2'
+
+    waitlog 'derby' 'OKGO'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'derby' \
+        'derby-client'
+
+
+        SELECT
+            id,
+            random()
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        FETCH FIRST
+            4
+        ROWS ONLY
+            ;
+
+            ------------------------------------
+            1          |0.1932062531449843      
+            2          |0.5652765455282668      
+            3          |0.34448761014129115     
+            4          |0.6284218555509495      
+
+            ------------------------------------
+            1          |0.7642735734820689      
+            2          |0.44415843317928394     
+            3          |0.33421342917914465     
+            4          |0.10152564481265713     
+
+        SELECT
+            id,
+            rand(2)
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        FETCH FIRST
+            4
+        ROWS ONLY
+            ;
+                    
+            ------------------------------------
+            1          |0.7311469360199058      
+            2          |0.7311469360199058      
+            3          |0.7311469360199058      
+            4          |0.7311469360199058      
+                               
+            ------------------------------------
+            1          |0.7311469360199058      
+            2          |0.7311469360199058      
+            3          |0.7311469360199058      
+            4          |0.7311469360199058      
+
+        
+        SELECT
+            id,
+            rand(id)
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        FETCH FIRST
+            4
+        ROWS ONLY
+            ;
+
+            ------------------------------------
+            1          |0.7308781907032909      
+            2          |0.7311469360199058      
+            3          |0.731057369148862       
+            4          |0.7306094602878371      
+
+            ------------------------------------
+            1          |0.7308781907032909      
+            2          |0.7311469360199058      
+            3          |0.731057369148862       
+            4          |0.7306094602878371      
+
+        SELECT
+            MOD(id,2),
+            rand(MOD(id,2))
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        FETCH FIRST
+            4
+        ROWS ONLY
+            ;
+
+            ------------------------------------
+            1          |0.7308781907032909      
+            0          |0.730967787376657       
+            1          |0.7308781907032909      
+            0          |0.730967787376657       
+                                  
+            ------------------------------------
+            1          |0.7308781907032909      
+            0          |0.730967787376657       
+            1          |0.7308781907032909      
+            0          |0.730967787376657       
+
+# -----------------------------------------------------
+# Update our HSQLDB images.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            vi hsqldb/base/Dockerfile
+
+            -   FROM cosmopterix/java:8-1.1
+            +   FROM cosmopterix/java:8-1.2
+
+            -   ENV hsqldbversion=2.3.4
+            +   ENV hsqldbversion=2.4.0
+
+            vi hsqldb/test/Dockerfile
+
+            -   FROM cosmopterix/hsqldb-base:2.3-1.1
+            +   FROM cosmopterix/hsqldb-base:2.4-1.2
+
+            docker build \
+                --tag "cosmopterix/hsqldb:latest" \
+                --tag "cosmopterix/hsqldb-base:2.4-1.2" \
+                --tag "cosmopterix/hsqldb-base:latest" \
+                --tag "cosmopterix/hsqldb-base:2.4-1.2" \
+                hsqldb/base
+
+            docker build \
+                --tag "cosmopterix/hsqldb-test:latest" \
+                --tag "cosmopterix/hsqldb-test:2.4-1.2" \
+                hsqldb/test
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Test our Derby container.
+#[user@virtual]
+
+    docker run \
+        --detach \
+        --name 'hsqldb' \
+       'cosmopterix/hsqldb-test:2.4-1.2'
+
+    waitlog 'hsqldb' 'OKGO'
+
+    docker exec \
+        --tty \
+        --interactive \
+        'hsqldb' \
+        'hsqldb-client'
+
+        SELECT
+            id,
+            rand()
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+            --  ---------------------
+             0  0.08161287291642783E0
+             1   0.8814845147954585E0
+             2  0.11133115278550088E0
+             3   0.3477318757403749E0
+
+            --  ----------------------
+             0    0.5558155917276617E0
+             1    0.6079099193289542E0
+             2   0.17470368994588015E0
+             3  0.060297646177972286E0
+
+        SELECT
+            id,
+            rand(2)
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+            --  different behaviour
+            --  ---------------------
+             0   0.7311469360199058E0
+             1   0.9014476240300544E0
+             2  0.49682259343089075E0
+             3   0.9858769332362016E0
+
+            --  different behaviour
+            --  ---------------------
+             0   0.9936866413660749E0
+             1   0.5619453390593078E0
+             2   0.4759845405345582E0
+             3  0.04941147821497294E0
+        
+        SELECT
+            id,
+            rand(id)
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+            --  --------------------
+             0   0.730967787376657E0
+             1  0.7308781907032909E0
+             2  0.7311469360199058E0
+             3   0.731057369148862E0
+
+            --  --------------------
+             0   0.730967787376657E0
+             1  0.7308781907032909E0
+             2  0.7311469360199058E0
+             3   0.731057369148862E0
+
+        SELECT
+            MOD(id,2),
+            rand(MOD(id,2))
+        FROM
+            alpha_source            
+        ORDER BY
+            id
+        LIMIT
+            4
+            ;
+
+            --  --------------------
+             0   0.730967787376657E0
+             1  0.7308781907032909E0
+             0   0.730967787376657E0
+             1  0.7308781907032909E0
+
+            --  --------------------
+             0   0.730967787376657E0
+             1  0.7308781907032909E0
+             0   0.730967787376657E0
+             1  0.7308781907032909E0
+
+# -------------------------------------------------------------------------------------------
+# Download our Oracle RPM file.
+#[user@virtual]
+
+    #
+    # Download the zipfile from Oracle.
+    # http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html
+
+    version=11.2.0-1.0
+    rpmfile=oracle-xe-${version}.x86_64.rpm
+    zipfile=${rpmfile}.zip
+    tarfile=${rpmfile}.tar.gz
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_HOME:?}"
+
+        if [ ! -e 'binaries/oracle' ]
+        then
+            mkdir -p 'binaries/oracle'
+        fi
+
+        pushd 'binaries/oracle'
+            wget http://data.metagrid.co.uk/temp/oracle-xe-11.2.0-1.0.x86_64.rpm.zip
+        popd
+
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Unpack our Oracle RPM file.
+#[user@virtual]
+
+    source "${HOME:?}/cosmopterix.settings"
+
+    pushd "${COSMOPTERIX_HOME:?}"
+        pushd binaries/oracle
+            if [ ! -e "${tarfile}" ]
+            then
+                if [ ! -e "${rpmfile}" ]
+                then
+                    if [ -e "${zipfile}" ]
+                    then
+                        unzip -j "${zipfile}" '*.rpm'
+                    else
+                        echo ""
+                        echo "-------- --------"
+                        echo "Please download the Oracle-Xe (eXpress Edition) zipfile"
+                        echo "Source [http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html]"
+                        echo "Target [${COSMOPTERIX_HOME:?}/binaries/oracle]"
+                        echo "-------- --------"
+                        echo ""
+                    fi
+                fi
+                if [ -e "${rpmfile}" ]
+                then
+                    tar -cvzf "${tarfile}" \
+                        "${rpmfile}"
+                fi
+            fi
+        popd
+    popd
+
+    pushd "${COSMOPTERIX_CODE:?}"
+        pushd docker
+            pushd oracle/oracle-xe/11.2
+                if [ ! -d 'rpm' ]
+                then
+                    mkdir 'rpm'
+                fi
+                pushd rpm
+                    if [ ! -e "${tarfile}" ]
+                    then
+                        ln "${COSMOPTERIX_HOME:?}/binaries/oracle/${tarfile}" "${tarfile}"
+                    fi
+                popd
+            popd
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Run our Oracle container.
+#[user@virtual]
+
+    docker run \
+        --detach \
+        --name 'oracle' \
+        "cosmopterix/oracle-test:11.2-1.1"
+
+    docker exec \
+        --tty \
+        --interactive \
+        'oracle' \
+            sqlplus
+
+        -- Enter user-name: system
+        -- Enter password: oracle
+
+        -- Connected to:
+        -- Oracle Database 11g Express Edition Release 11.2.0.2.0 - 64bit Production
+        -- SQL> 
+
+        START /database.init/alpha-source.sql
+
+            Table created.
+            Sequence created.
+            Trigger created.
+
+            1 row created.
+            1 row created.
+            ....
+            ....
+            1 row created.
+
+
+        SELECT
+            id,
+            DBMS_RANDOM.NORMAL()
+        FROM
+            alpha_source            
+        WHERE
+            id < 5
+        ORDER BY
+            id
+            ;
+ 
+	            ID DBMS_RANDOM.NORMAL()
+            ---------- --------------------
+	             1	     .214090767
+	             2	     .296945845
+	             3	     .028558182
+	             4	     -1.8089723
+
+             
+	            ID DBMS_RANDOM.NORMAL()
+            ---------- --------------------
+	             1	     1.48898573
+	             2	     1.37494768
+	             3	     2.21155463
+	             4	     1.01540415
+
+        SELECT
+            id,
+            DBMS_RANDOM.SEED(2),
+            DBMS_RANDOM.NORMAL()
+        FROM
+            alpha_source            
+        WHERE
+            id < 5
+        ORDER BY
+            id
+            ;
+
+        
 
