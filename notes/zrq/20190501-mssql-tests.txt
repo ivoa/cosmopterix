@@ -1,0 +1,130 @@
+#
+# <meta:header>
+#   <meta:licence>
+#     Copyright (c) 2019, ROE (http://www.roe.ac.uk/)
+#
+#     This information is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This information is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#   </meta:licence>
+# </meta:header>
+#
+#
+
+
+# -----------------------------------------------------
+# Build our SQL Server containers.
+#[user@virtual]
+
+    version=2017-latest-ubuntu
+
+    source "${HOME:?}/cosmopterix.settings"
+    pushd "${COSMOPTERIX_CODE:?}"
+
+        pushd docker
+
+            sed -i "
+                /^FROM/ {
+                    s/:\(.*\)\$/:${version}/
+                    }
+                " mssql/base/Dockerfile
+
+            sed -i "
+                /^FROM/ {
+                    s/:\(.*\)\$/:${version}/
+                    }
+                " mssql/test/Dockerfile
+
+            docker build \
+                --tag "cosmopterix/mssql-base:${version:?}" \
+                mssql/base
+
+            docker build \
+                --tag "cosmopterix/mssql-test:${version:?}" \
+                mssql/test
+
+        popd
+    popd
+
+# -------------------------------------------------------------------------------------------
+# Start our SQLserver container.
+#[Stevedore@virtual]
+
+    docker run \
+        --name 'mssql' \
+        --env 'ACCEPT_EULA=Y' \
+        --env 'SA_PASSWORD=91.2-EightyOnePointSix' \
+        -d \
+        "cosmopterix/mssql-test:${version:?}'
+
+# -------------------------------------------------------------------------------------------
+# Login to our SQLserver container.
+#[Stevedore@virtual]
+
+    docker exec \
+        --tty \
+        --interactive \
+        'mssql' \
+        bash
+
+# -------------------------------------------------------------------------------------------
+# Run the SQLserver client.
+#[user@container]
+
+        PATH=${PATH}:/opt/mssql-tools/bin
+
+        sqlcmd \
+            -S localhost \
+            -U SA \
+            -P '91.2-EightyOnePointSix'
+
+            --
+            -- Check the server version.
+            SELECT @@VERSION;
+            go
+
+                Microsoft SQL Server vNext (CTP2.0) - 14.0.500.272 (X64)
+                Apr 13 2017 11:44:40
+                Copyright (C) 2017 Microsoft Corporation. All rights reserved.
+                Developer Edition (64-bit) on Linux (Ubuntu 16.04.2 LTS)
+
+            --
+            -- List the local databases.
+            SELECT Name from sys.Databases;
+            go
+
+            --
+            -- Create a test database.
+            CREATE DATABASE testdb;
+            go
+
+            --
+            -- Use the test database.
+            USE testdb;
+            go
+
+            --
+            -- Load our test data.
+            :r /database.init/alpha-source.sql
+            go
+
+
+# -------------------------------------------------------------------------------------------
+# Test queries ..
+
+            USE testdb;
+            go
+
+            SELECT id, ra, decl FROM alpha_source WHERE id >= 10 AND id < 20 ;
+            go
+
+
